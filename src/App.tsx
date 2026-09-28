@@ -8,9 +8,16 @@ import ReportPreview from './components/report/ReportPreview';
 import TemplateBrowser from './components/templates/TemplateBrowser';
 import { useProjects } from './hooks/useProjects';
 import { useFindings } from './hooks/useFindings';
-import type { Finding, Project } from './types';
+import type { Finding, Project, Endpoint, RequestResponseEntry, HttpMethod } from './types';
 import { createDefaultFinding } from './types';
 import type { FindingTemplate } from './constants';
+
+interface OldFinding {
+    url?: string;
+    method?: string;
+    requestResponse?: string;
+    [key: string]: unknown;
+}
 
 type ActiveView = 'editor' | 'settings';
 
@@ -52,11 +59,11 @@ export default function App() {
         description: template.description,
         impact: template.impact,
         remediation: template.remediation,
+        businessSummary: template.businessSummary ?? '',
         cwe: template.cwe ?? '',
         cvss: template.cvss ?? '',
         references: template.references ?? '',
-        url: template.url ?? '',
-        method: template.method ?? '',
+        endpoints: template.url ? [{ id: crypto.randomUUID(), method: (template.method as HttpMethod) || 'GET', url: template.url }] : [],
         parameter: template.parameter ?? '',
         affectedHost: template.affectedHost ?? '',
         port: template.port ?? '',
@@ -86,26 +93,28 @@ export default function App() {
     }
   };
 
-  const handleDuplicateFinding = (id: string) => {
+const handleDuplicateFinding = (id: string) => {
     const original = findings.find((f) => f.id === id);
     if (!original) return;
     const duplicate: Finding = {
-      ...original,
-      id: crypto.randomUUID(),
-      title: `${original.title} (Copy)`,
-      createdAt: new Date().toISOString(),
+        ...original,
+        id: crypto.randomUUID(),
+        title: `${original.title} (Copy)`,
+        endpoints: JSON.parse(JSON.stringify(original.endpoints)),
+        requestResponses: JSON.parse(JSON.stringify(original.requestResponses)),
+        createdAt: new Date().toISOString(),
     };
     setFindings((prev) => [duplicate, ...prev]);
     setSelectedFindingId(duplicate.id);
-  };
+};
 
-  const handleUpdateFinding = (field: keyof Finding, value: string) => {
+const handleUpdateFinding = (field: keyof Finding, value: string | Endpoint[] | RequestResponseEntry[]) => {
     setFindings((prev) =>
-      prev.map((f) =>
-        f.id === selectedFindingId ? { ...f, [field]: value } : f
-      )
+        prev.map((f) =>
+            f.id === selectedFindingId ? { ...f, [field]: value } : f
+        )
     );
-  };
+};
 
   // --- Project handlers ---
 
@@ -160,13 +169,26 @@ export default function App() {
           const full: Project = { ...imported, ...parsed.project, id: imported.id, createdAt: imported.createdAt, updatedAt: imported.updatedAt };
           updateProject(full);
           // Assign findings to the new project
-          const importedFindings: Finding[] = parsed.findings.map((f: Finding) => ({
-            ...f,
-            id: crypto.randomUUID(),
-            projectId: imported.id,
-            status: f.status || 'Open',
-            createdAt: f.createdAt || new Date().toISOString(),
-          }));
+const importedFindings: Finding[] = parsed.findings.map((f: Finding) => {
+            const old = f as unknown as OldFinding;
+            const migrated: Finding = {
+                ...f,
+                id: crypto.randomUUID(),
+                projectId: imported.id,
+                status: f.status || 'Open',
+                createdAt: f.createdAt || new Date().toISOString(),
+                endpoints: f.endpoints || [],
+                requestResponses: f.requestResponses || [],
+                businessSummary: f.businessSummary || '',
+            };
+            if (!migrated.endpoints.length && old.url) {
+                migrated.endpoints = [{ id: crypto.randomUUID(), method: (old.method || 'GET') as HttpMethod, url: old.url }];
+            }
+            if (!migrated.requestResponses.length && old.requestResponse) {
+                migrated.requestResponses = [{ id: crypto.randomUUID(), request: '', response: old.requestResponse }];
+            }
+            return migrated;
+        });
           // We need to select the project first, then set findings
           setActiveProjectId(imported.id);
           setTimeout(() => setFindings(importedFindings), 100);

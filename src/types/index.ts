@@ -40,6 +40,18 @@ export interface Project {
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'HEAD';
 
+export interface Endpoint {
+    id: string;
+    method: HttpMethod;
+    url: string;
+}
+
+export interface RequestResponseEntry {
+    id: string;
+    request: string;
+    response: string;
+}
+
 export interface Finding {
     id: string;
     projectId: string;
@@ -47,8 +59,7 @@ export interface Finding {
     severity: Severity;
     status: FindingStatus;
     // Metadata properties
-    url: string;
-    method: string;
+    endpoints: Endpoint[];
     parameter: string;
     affectedHost: string;
     port: string;
@@ -60,7 +71,8 @@ export interface Finding {
     // Content blocks
     description: string;
     poc: string;
-    requestResponse: string;
+    requestResponses: RequestResponseEntry[];
+    businessSummary: string;
     impact: string;
     remediation: string;
     notes: string;
@@ -102,8 +114,7 @@ export function createDefaultFinding(projectId: string): Finding {
         title: '',
         severity: 'Medium',
         status: 'Open',
-        url: '',
-        method: '',
+        endpoints: [],
         parameter: '',
         affectedHost: '',
         port: '',
@@ -114,7 +125,8 @@ export function createDefaultFinding(projectId: string): Finding {
         references: '',
         description: '',
         poc: '',
-        requestResponse: '',
+        requestResponses: [],
+        businessSummary: '',
         impact: '',
         remediation: '',
         notes: '',

@@ -36,7 +36,9 @@ export function FindingDetail({ finding, index }: FindingDetailProps) {
                     {f.cvss && <MetaRow label="CVSS Score" value={f.cvss} />}
                     {f.cve && <MetaRow label="CVE" value={f.cve} />}
                     {f.cwe && <MetaRow label="CWE" value={f.cwe} />}
-                    {(f.url || f.method) && <MetaRow label="Endpoint" value={`${f.method ? f.method + ' ' : ''}${f.url}`} />}
+                    {f.endpoints.length > 0 && f.endpoints.map((ep, i) => (
+                        <MetaRow key={ep.id} label={i === 0 ? 'Endpoint' : ''} value={`${ep.method ? ep.method + ' ' : ''}${ep.url}`} />
+                    ))}
                     {f.parameter && <MetaRow label="Parameter" value={f.parameter} />}
                     {f.affectedHost && <MetaRow label="Affected Host" value={f.affectedHost} />}
                     {f.port && <MetaRow label="Port" value={f.port} />}
@@ -47,7 +49,24 @@ export function FindingDetail({ finding, index }: FindingDetailProps) {
             <div className="space-y-8">
                 {f.description && <ContentSection title="Description" html={f.description} />}
                 {f.poc && <ContentSection title="Proof of Concept" html={f.poc} />}
-                {f.requestResponse && <ContentSection title="Request / Response" html={f.requestResponse} />}
+                {f.businessSummary && <ContentSection title="Business Summary" html={f.businessSummary} />}
+                {f.requestResponses.length > 0 && f.requestResponses.map((rr, i) => (
+                    <div key={rr.id} className="report-no-break">
+                        <h4 className="text-lg font-bold mb-3 text-gray-800">Request / Response {f.requestResponses.length > 1 ? `#${i + 1}` : ''}</h4>
+                        {rr.request && (
+                            <div className="mb-3">
+                                <h5 className="text-sm font-semibold text-gray-600 mb-1">Request</h5>
+                                <pre className="bg-gray-50 p-3 rounded text-xs overflow-x-auto">{rr.request}</pre>
+                            </div>
+                        )}
+                        {rr.response && (
+                            <div>
+                                <h5 className="text-sm font-semibold text-gray-600 mb-1">Response</h5>
+                                <pre className="bg-gray-50 p-3 rounded text-xs overflow-x-auto">{rr.response}</pre>
+                            </div>
+                        )}
+                    </div>
+                ))}
                 {f.impact && <ContentSection title="Impact" html={f.impact} />}
                 {f.remediation && <ContentSection title="Remediation" html={f.remediation} />}
                 {f.references && <ContentSection title="References" html={f.references} />}

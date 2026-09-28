@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Activity, CircleDot, Link2, Tag, Server, Hash, ShieldAlert, List, BarChart3, Plus } from 'lucide-react';
 import { SEVERITY_COLORS } from '../../constants';
 import { autoResize } from '../../hooks/useAutoResize';
-import type { Severity, FindingStatus, Finding } from '../../types';
+import type { Severity, FindingStatus, Finding, Endpoint, HttpMethod, RequestResponseEntry } from '../../types';
 
 const SEVERITIES: Severity[] = ['Critical', 'High', 'Medium', 'Low', 'Info'];
 
@@ -12,9 +12,11 @@ const STATUS_OPTIONS: { value: FindingStatus; dot: string; text: string }[] = [
     { value: 'Accepted Risk', dot: 'bg-yellow-400', text: 'text-yellow-400' },
 ];
 
-// All optional properties
+const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'];
+
+// All optional properties (url removed — endpoints managed separately)
 const OPTIONAL_PROPERTIES = [
-    { key: 'url', label: 'Endpoint', icon: Link2, desc: 'HTTP method and URL path of the affected endpoint' },
+    { key: 'status', label: 'Status', icon: CircleDot, desc: 'Current status of the finding' },
     { key: 'parameter', label: 'Parameter', icon: Tag, desc: 'Vulnerable request parameter name' },
     { key: 'affectedHost', label: 'Host', icon: Server, desc: 'IP address or hostname of the affected system' },
     { key: 'port', label: 'Port', icon: Hash, desc: 'Network port number of the affected service' },
@@ -38,8 +40,6 @@ function useDropdown() {
     return { open, setOpen, ref };
 }
 
-
-
 function getCvssLabel(value: string): string {
     const n = parseFloat(value);
     if (isNaN(n)) return '';
@@ -52,7 +52,7 @@ function getCvssLabel(value: string): string {
 
 interface FindingTitleProps {
     finding: Finding;
-    onUpdate: (field: keyof Finding, value: string) => void;
+    onUpdate: (field: keyof Finding, value: string | Endpoint[] | RequestResponseEntry[]) => void;
     onOpenCvssCalculator?: () => void;
 }
 
@@ -60,40 +60,71 @@ export default function FindingTitle({ finding, onUpdate, onOpenCvssCalculator }
     const sevDropdown = useDropdown();
     const statusDropdown = useDropdown();
     const addDropdown = useDropdown();
-    const methodDd = useDropdown();
+    const [methodDropdownIndex, setMethodDropdownIndex] = useState<number | null>(null);
+    const methodDropdownRef = useRef<HTMLDivElement>(null);
     const [visibleProps, setVisibleProps] = useState<Set<OptionalKey>>(() => {
-        // Auto-show any property that already has a value
+        // Auto-show any property that already has a value, but not status (it's opt-in)
         const initial = new Set<OptionalKey>();
         for (const prop of OPTIONAL_PROPERTIES) {
+            if (prop.key === 'status') continue;
             if (finding[prop.key]) initial.add(prop.key);
         }
         return initial;
     });
 
-    // Sync visible props when finding changes (switching findings)
     useEffect(() => {
         const next = new Set<OptionalKey>();
         for (const prop of OPTIONAL_PROPERTIES) {
+            if (prop.key === 'status') continue;
             if (finding[prop.key]) next.add(prop.key);
         }
         setVisibleProps(next);
     }, [finding.id]);
 
+    // Close method dropdown when clicking outside
+    useEffect(() => {
+        function handleClick(e: MouseEvent) {
+            if (methodDropdownRef.current && !methodDropdownRef.current.contains(e.target as Node)) {
+                setMethodDropdownIndex(null);
+            }
+        }
+        if (methodDropdownIndex !== null) document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [methodDropdownIndex]);
+
     const currentStatus = STATUS_OPTIONS.find((s) => s.value === finding.status) ?? STATUS_OPTIONS[0];
     const hiddenProps = OPTIONAL_PROPERTIES.filter((p) => !visibleProps.has(p.key));
 
+    // Initialize visibleProps with status if it has a value (non-default)
+    // Actually status is always 'Open' by default, so don't auto-show it
     const addProperty = (key: OptionalKey) => {
         setVisibleProps((prev) => new Set(prev).add(key));
         addDropdown.setOpen(false);
     };
 
     const removeProperty = (key: OptionalKey) => {
-        onUpdate(key, '');
+        onUpdate(key, key === 'status' ? 'Open' : '');
         setVisibleProps((prev) => {
             const next = new Set(prev);
             next.delete(key);
             return next;
         });
+    };
+
+    const addEndpoint = () => {
+        onUpdate('endpoints', [...finding.endpoints, { id: crypto.randomUUID(), method: 'GET', url: '' }]);
+    };
+
+    const removeEndpoint = (index: number) => {
+        const next = finding.endpoints.filter((_, i) => i !== index);
+        onUpdate('endpoints', next);
+    };
+
+    const updateEndpoint = (index: number, field: 'method' | 'url', value: string) => {
+        const next = finding.endpoints.map((ep, i) =>
+            i === index ? { ...ep, [field]: value } : ep
+        );
+        onUpdate('endpoints', next);
     };
 
     return (
@@ -141,56 +172,25 @@ export default function FindingTitle({ finding, onUpdate, onOpenCvssCalculator }
                     )}
                 </div>
 
-                {/* Status — always visible */}
-                <div className="flex items-center group min-h-[34px] -mx-2 rounded-md hover:bg-zinc-800/40 transition-colors">
-                    <div className="flex items-center gap-1.5 text-xs text-zinc-500 w-28 px-2 shrink-0">
-                        <CircleDot className="w-3.5 h-3.5" /><span>Status</span>
-                    </div>
-                    <div className="relative" ref={statusDropdown.ref}>
-                        <button onClick={() => statusDropdown.setOpen(!statusDropdown.open)}
-                            className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded transition-colors hover:bg-zinc-700/50 ${currentStatus.text}`}>
-                            <span className={`w-2 h-2 rounded-full ${currentStatus.dot}`} />
-                            {currentStatus.value}
-                        </button>
-                        {statusDropdown.open && (
-                            <div className="absolute top-full left-0 mt-1 z-50 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl py-1 min-w-[170px]">
-                                <div className="px-2.5 py-1.5 text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Select status</div>
-                                {STATUS_OPTIONS.map((opt) => (
-                                    <button key={opt.value} onClick={() => { onUpdate('status', opt.value); statusDropdown.setOpen(false); }}
-                                        className={`w-full flex items-center gap-2 text-left text-xs px-2.5 py-1.5 transition-colors rounded-sm mx-0.5 ${opt.value === finding.status ? 'bg-zinc-800' : 'hover:bg-zinc-800/60'}`}
-                                        style={{ width: 'calc(100% - 4px)' }}>
-                                        <span className={`w-2 h-2 rounded-full ${opt.dot}`} />
-                                        <span className={`font-medium ${opt.text}`}>{opt.value}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Optional properties — only shown when added */}
-                {OPTIONAL_PROPERTIES.filter((p) => visibleProps.has(p.key)).map((prop) => {
-                    const Icon = prop.icon;
-
-                    // Endpoint — method dropdown + url input inline
-                    if (prop.key === 'url') {
-                        const METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'];
-                        return (
-                            <div key={prop.key} className="flex items-center group min-h-[34px] -mx-2 rounded-md hover:bg-zinc-800/40 transition-colors">
+                {/* Endpoints */}
+                {(finding.endpoints.length > 0 && (
+                    <div className="space-y-1">
+                        {finding.endpoints.map((ep, index) => (
+                            <div key={ep.id} className="flex items-center group min-h-[34px] -mx-2 rounded-md hover:bg-zinc-800/40 transition-colors">
                                 <div className="flex items-center gap-1.5 text-xs text-zinc-500 w-28 px-2 shrink-0">
-                                    <Icon className="w-3.5 h-3.5" /><span>{prop.label}</span>
+                                    <Link2 className="w-3.5 h-3.5" /><span>Endpoint</span>
                                 </div>
-                                <div className="flex items-center gap-0 flex-1">
-                                    <div className="relative" ref={methodDd.ref}>
-                                        <button onClick={() => methodDd.setOpen(!methodDd.open)}
-                                            className={`text-[11px] font-mono font-semibold px-2 py-1 rounded transition-colors hover:bg-zinc-700/50 ${finding.method ? 'text-zinc-300' : 'text-zinc-600'}`}>
-                                            {finding.method || '---'}
+                                <div className="flex items-center gap-0 flex-1 relative" ref={methodDropdownRef}>
+                                    <div className="relative">
+                                        <button onClick={() => setMethodDropdownIndex(methodDropdownIndex === index ? null : index)}
+                                            className={`text-[11px] font-mono font-semibold px-2 py-1 rounded transition-colors hover:bg-zinc-700/50 ${ep.method ? 'text-zinc-300' : 'text-zinc-600'}`}>
+                                            {ep.method || '---'}
                                         </button>
-                                        {methodDd.open && (
+                                        {methodDropdownIndex === index && (
                                             <div className="absolute top-full left-0 mt-1 z-50 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl py-1 min-w-[100px]">
-                                                {METHODS.map((m) => (
-                                                    <button key={m} onClick={() => { onUpdate('method', m); methodDd.setOpen(false); }}
-                                                        className={`w-full text-left text-[11px] px-2.5 py-1.5 font-mono font-semibold transition-colors ${m === finding.method ? 'bg-zinc-800 text-zinc-200' : 'text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-300'}`}>
+                                                {HTTP_METHODS.map((m) => (
+                                                    <button key={m} onClick={() => { updateEndpoint(index, 'method', m); setMethodDropdownIndex(null); }}
+                                                        className={`w-full text-left text-[11px] px-2.5 py-1.5 font-mono font-semibold transition-colors ${m === ep.method ? 'bg-zinc-800 text-zinc-200' : 'text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-300'}`}>
                                                         {m}
                                                     </button>
                                                 ))}
@@ -199,16 +199,28 @@ export default function FindingTitle({ finding, onUpdate, onOpenCvssCalculator }
                                     </div>
                                     <input
                                         type="text"
-                                        value={finding.url}
-                                        onChange={(e) => onUpdate('url', e.target.value)}
+                                        value={ep.url}
+                                        onChange={(e) => updateEndpoint(index, 'url', e.target.value)}
                                         placeholder="/api/endpoint"
                                         className="flex-1 bg-transparent text-xs text-zinc-300 placeholder-zinc-600 outline-none px-2 py-1 rounded hover:bg-zinc-700/30 focus:bg-zinc-700/30 transition-colors"
                                     />
                                 </div>
-                                <button onClick={() => { removeProperty(prop.key); onUpdate('method', ''); }} className="p-1 text-zinc-600 hover:text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity mr-1" title="Remove">×</button>
+                                <button onClick={() => removeEndpoint(index)} className="p-1 text-zinc-600 hover:text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity mr-1" title="Remove endpoint">×</button>
                             </div>
-                        );
-                    }
+                        ))}
+                        <button onClick={addEndpoint} className="flex items-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-400 px-2 py-1.5 rounded transition-colors hover:bg-zinc-800/40 ml-28">
+                            <Plus className="w-3.5 h-3.5" /> Add endpoint
+                        </button>
+                    </div>
+                )) || (
+                    <button onClick={addEndpoint} className="flex items-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-400 px-2 py-1.5 rounded transition-colors hover:bg-zinc-800/40 ml-28">
+                        <Plus className="w-3.5 h-3.5" /> Add endpoint
+                    </button>
+                )}
+
+                {/* Optional properties — only shown when added */}
+                {OPTIONAL_PROPERTIES.filter((p) => visibleProps.has(p.key)).map((prop) => {
+                    const Icon = prop.icon;
 
                     if (prop.key === 'cvss') {
                         return (
@@ -245,7 +257,37 @@ export default function FindingTitle({ finding, onUpdate, onOpenCvssCalculator }
                         );
                     }
 
-                    // Default — inline text input
+                    if (prop.key === 'status') {
+                        return (
+                            <div key={prop.key} className="flex items-center group min-h-[34px] -mx-2 rounded-md hover:bg-zinc-800/40 transition-colors">
+                                <div className="flex items-center gap-1.5 text-xs text-zinc-500 w-28 px-2 shrink-0">
+                                    <Icon className="w-3.5 h-3.5" /><span>{prop.label}</span>
+                                </div>
+                                <div className="relative" ref={statusDropdown.ref}>
+                                    <button onClick={() => statusDropdown.setOpen(!statusDropdown.open)}
+                                        className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded transition-colors hover:bg-zinc-700/50 ${currentStatus.text}`}>
+                                        <span className={`w-2 h-2 rounded-full ${currentStatus.dot}`} />
+                                        {currentStatus.value}
+                                    </button>
+                                    {statusDropdown.open && (
+                                        <div className="absolute top-full left-0 mt-1 z-50 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl py-1 min-w-[170px]">
+                                            <div className="px-2.5 py-1.5 text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Select status</div>
+                                            {STATUS_OPTIONS.map((opt) => (
+                                                <button key={opt.value} onClick={() => { onUpdate('status', opt.value); statusDropdown.setOpen(false); }}
+                                                    className={`w-full flex items-center gap-2 text-left text-xs px-2.5 py-1.5 transition-colors rounded-sm mx-0.5 ${opt.value === finding.status ? 'bg-zinc-800' : 'hover:bg-zinc-800/60'}`}
+                                                    style={{ width: 'calc(100% - 4px)' }}>
+                                                    <span className={`w-2 h-2 rounded-full ${opt.dot}`} />
+                                                    <span className={`font-medium ${opt.text}`}>{opt.value}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <button onClick={() => removeProperty(prop.key)} className="p-1 text-zinc-600 hover:text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity mr-1" title="Remove">×</button>
+                            </div>
+                        );
+                    }
+
                     return (
                         <div key={prop.key} className="flex items-center group min-h-[34px] -mx-2 rounded-md hover:bg-zinc-800/40 transition-colors">
                             <div className="flex items-center gap-1.5 text-xs text-zinc-500 w-28 px-2 shrink-0">
@@ -305,7 +347,9 @@ export default function FindingTitle({ finding, onUpdate, onOpenCvssCalculator }
                     <tbody>
                         <tr><td className="font-bold pr-4 py-0.5 w-32">Severity</td><td className="uppercase">{finding.severity}</td></tr>
                         <tr><td className="font-bold pr-4 py-0.5">Status</td><td>{finding.status}</td></tr>
-                        {(finding.url || finding.method) && <tr><td className="font-bold pr-4 py-0.5">Endpoint</td><td className="break-all font-mono">{finding.method && <span className="font-bold mr-1">{finding.method}</span>}{finding.url}</td></tr>}
+                        {finding.endpoints.length > 0 && finding.endpoints.map((ep, i) => (
+                            <tr key={ep.id}><td className="font-bold pr-4 py-0.5">{i === 0 ? 'Endpoint' : ''}</td><td className="break-all font-mono">{ep.method && <span className="font-bold mr-1">{ep.method}</span>}{ep.url}</td></tr>
+                        ))}
                         {finding.parameter && <tr><td className="font-bold pr-4 py-0.5">Parameter</td><td>{finding.parameter}</td></tr>}
                         {finding.affectedHost && <tr><td className="font-bold pr-4 py-0.5">Host</td><td>{finding.affectedHost}</td></tr>}
                         {finding.port && <tr><td className="font-bold pr-4 py-0.5">Port</td><td>{finding.port}</td></tr>}

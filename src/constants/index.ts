@@ -45,5 +45,6 @@ export interface FindingTemplate {
     description: string;
     impact: string;
     remediation: string;
+    businessSummary?: string;
     references?: string;
 }

@@ -1,24 +1,24 @@
 import { useState, useEffect } from 'react';
-import { FileText, Layout, Bug, CheckCircle2, FlaskConical, ArrowRightLeft, BookOpen, StickyNote, Plus } from 'lucide-react';
+import { FileText, Layout, Bug, CheckCircle2, FlaskConical, ArrowRightLeft, BookOpen, StickyNote, Plus, X } from 'lucide-react';
 import EditorToolbar from './EditorToolbar';
 import FindingTitle from './FindingTitle';
 import ContentBlock from './ContentBlock';
 import { FindingDetail } from '../../templates/default/FindingDetail';
-import type { Finding, Severity } from '../../types';
+import type { Finding, Severity, RequestResponseEntry, Endpoint } from '../../types';
 import CvssCalculatorModal from './CvssCalculatorModal';
 
 const OPTIONAL_SECTIONS = [
     { key: 'poc' as const, label: 'Proof of Concept', icon: FlaskConical, iconClass: 'text-purple-400/70', placeholder: 'Step-by-step instructions to reproduce the vulnerability...' },
-    { key: 'requestResponse' as const, label: 'Request / Response', icon: ArrowRightLeft, iconClass: 'text-cyan-400/70', placeholder: 'Raw HTTP request and response samples...' },
+    { key: 'businessSummary' as const, label: 'Business Summary', icon: FileText, iconClass: 'text-indigo-400/70', placeholder: 'Business impact and context...' },
     { key: 'references' as const, label: 'References', icon: BookOpen, iconClass: 'text-amber-400/70', placeholder: 'OWASP links, vendor advisories, CWE references, related articles...' },
     { key: 'notes' as const, label: 'Notes', icon: StickyNote, iconClass: 'text-zinc-400/70', placeholder: 'Internal notes (not included in final report)...' },
 ];
 
-type SectionKey = typeof OPTIONAL_SECTIONS[number]['key'];
+type SectionKey = typeof OPTIONAL_SECTIONS[number]['key'] | 'requestResponse';
 
 interface EditorProps {
     selectedFinding: Finding | null;
-    onUpdateField: (field: keyof Finding, value: string) => void;
+    onUpdateField: (field: keyof Finding, value: string | Endpoint[] | RequestResponseEntry[]) => void;
     onDelete: (id: string) => void;
     onDuplicate: (id: string) => void;
 }
@@ -27,29 +27,57 @@ export default function Editor({ selectedFinding, onUpdateField, onDelete, onDup
     const [visibleSections, setVisibleSections] = useState<Set<SectionKey>>(new Set());
     const [cvssModalOpen, setCvssModalOpen] = useState(false);
 
-    // Auto-show sections that already have content when switching findings
     useEffect(() => {
         if (!selectedFinding) return;
         const next = new Set<SectionKey>();
         for (const s of OPTIONAL_SECTIONS) {
             if (selectedFinding[s.key]) next.add(s.key);
         }
+        if (selectedFinding.requestResponses.length > 0) next.add('requestResponse');
         setVisibleSections(next);
     }, [selectedFinding?.id]);
 
     const hiddenSections = OPTIONAL_SECTIONS.filter((s) => !visibleSections.has(s.key));
 
     const addSection = (key: SectionKey) => {
-        setVisibleSections((prev) => new Set(prev).add(key));
+        if (key === 'requestResponse') {
+            setVisibleSections((prev) => new Set(prev).add(key));
+            if (selectedFinding && selectedFinding.requestResponses.length === 0) {
+                onUpdateField('requestResponses', [{ id: crypto.randomUUID(), request: '', response: '' }]);
+            }
+        } else {
+            setVisibleSections((prev) => new Set(prev).add(key));
+        }
     };
 
     const removeSection = (key: SectionKey) => {
-        onUpdateField(key, '');
+        if (key === 'requestResponse') {
+            onUpdateField('requestResponses', []);
+        } else {
+            onUpdateField(key, '');
+        }
         setVisibleSections((prev) => {
             const next = new Set(prev);
             next.delete(key);
             return next;
         });
+    };
+
+    const addRequestResponse = () => {
+        const next = [...selectedFinding!.requestResponses, { id: crypto.randomUUID(), request: '', response: '' }];
+        onUpdateField('requestResponses', next);
+    };
+
+    const removeRequestResponse = (index: number) => {
+        const next = selectedFinding!.requestResponses.filter((_, i) => i !== index);
+        onUpdateField('requestResponses', next);
+    };
+
+    const updateRequestResponse = (index: number, field: 'request' | 'response', value: string) => {
+        const next = selectedFinding!.requestResponses.map((rr, i) =>
+            i === index ? { ...rr, [field]: value } : rr
+        );
+        onUpdateField('requestResponses', next);
     };
 
     return (
@@ -104,7 +132,7 @@ export default function Editor({ selectedFinding, onUpdateField, onDelete, onDup
                                     onChange={(value) => onUpdateField('remediation', value)}
                                 />
 
-                                {/* Optional sections — PoC, Request/Response */}
+                                {/* Optional sections — PoC, References, Notes */}
                                 {OPTIONAL_SECTIONS.filter((s) => visibleSections.has(s.key)).map((section) => (
                                     <div key={section.key} className="group/section relative">
                                         <button
@@ -125,8 +153,58 @@ export default function Editor({ selectedFinding, onUpdateField, onDelete, onDup
                                     </div>
                                 ))}
 
+                                {/* Request / Response — multiple entries */}
+                                {visibleSections.has('requestResponse') && (
+                                    <div className="relative group/section">
+                                        <button
+                                            onClick={() => removeSection('requestResponse')}
+                                            className="absolute -top-2 right-0 text-xs text-zinc-600 hover:text-red-400 opacity-0 group-hover/section:opacity-100 transition-opacity print:hidden"
+                                            title="Remove Request / Response"
+                                        >
+                                            Remove
+                                        </button>
+                                        <h3 className="flex items-center text-lg font-semibold text-zinc-100 print:text-black mb-3">
+                                            <ArrowRightLeft className="w-5 h-5 mr-2 text-cyan-400/70 print:hidden" /> Request / Response
+                                        </h3>
+                                        <div className="space-y-4">
+                                            {selectedFinding.requestResponses.map((rr, index) => (
+                                                <div key={rr.id} className="flex gap-4 items-start">
+                                                    <div className="flex-1">
+                                                        <label className="text-xs text-zinc-500 mb-1 block">Request</label>
+                                                        <textarea
+                                                            value={rr.request}
+                                                            onChange={(e) => updateRequestResponse(index, 'request', e.target.value)}
+                                                            placeholder="HTTP request..."
+                                                            className="w-full bg-transparent text-xs text-zinc-300 placeholder-zinc-600 outline-none px-2 py-1.5 rounded hover:bg-zinc-700/30 focus:bg-zinc-700/30 transition-colors border border-zinc-800 min-h-[72px]"
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <label className="text-xs text-zinc-500 mb-1 block">Response</label>
+                                                        <textarea
+                                                            value={rr.response}
+                                                            onChange={(e) => updateRequestResponse(index, 'response', e.target.value)}
+                                                            placeholder="HTTP response..."
+                                                            className="w-full bg-transparent text-xs text-zinc-300 placeholder-zinc-600 outline-none px-2 py-1.5 rounded hover:bg-zinc-700/30 focus:bg-zinc-700/30 transition-colors border border-zinc-800 min-h-[72px]"
+                                                        />
+                                                    </div>
+                                                    <button
+                                                        onClick={() => removeRequestResponse(index)}
+                                                        className="mt-6 p-1 text-zinc-600 hover:text-red-400 opacity-0 group-hover/section:opacity-100 transition-opacity"
+                                                        title="Remove"
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <button onClick={addRequestResponse} className="flex items-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-400 px-3 py-2 rounded-lg border border-dashed border-zinc-800 hover:border-zinc-600 transition-colors mt-2">
+                                            <Plus className="w-3.5 h-3.5" /> Add request/response
+                                        </button>
+                                    </div>
+                                )}
+
                                 {/* + Add section buttons */}
-                                {hiddenSections.length > 0 && (
+                                {(hiddenSections.length > 0 || !visibleSections.has('requestResponse')) && (
                                     <div className="flex items-center gap-2 print:hidden">
                                         {hiddenSections.map((section) => {
                                             const Icon = section.icon;
@@ -142,6 +220,16 @@ export default function Editor({ selectedFinding, onUpdateField, onDelete, onDup
                                                 </button>
                                             );
                                         })}
+                                        {!visibleSections.has('requestResponse') && (
+                                            <button
+                                                onClick={() => addSection('requestResponse')}
+                                                className="flex items-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-300 px-3 py-2 rounded-lg border border-dashed border-zinc-800 hover:border-zinc-600 transition-colors"
+                                            >
+                                                <Plus className="w-3.5 h-3.5" />
+                                                <ArrowRightLeft className="w-3.5 h-3.5" />
+                                                Request / Response
+                                            </button>
+                                        )}
                                     </div>
                                 )}
                             </div>
