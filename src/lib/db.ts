@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { Finding, Project } from '../types';
+import type { Finding, Project, ReportVersion } from '../types';
 
 interface PengDB extends DBSchema {
     projects: {
@@ -11,10 +11,15 @@ interface PengDB extends DBSchema {
         value: Finding;
         indexes: { projectId: string };
     };
+    reportVersions: {
+        key: string;
+        value: ReportVersion;
+        indexes: { projectId: string };
+    };
 }
 
 const DB_NAME = 'peng-db';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 let dbPromise: Promise<IDBPDatabase<PengDB>> | null = null;
 
@@ -36,6 +41,12 @@ function getDB() {
                 }
                 if (!db.objectStoreNames.contains('projects')) {
                     db.createObjectStore('projects', { keyPath: 'id' });
+                }
+                if (oldVersion < 4) {
+                    if (!db.objectStoreNames.contains('reportVersions')) {
+                        const versionsStore = db.createObjectStore('reportVersions', { keyPath: 'id' });
+                        versionsStore.createIndex('projectId', 'projectId');
+                    }
                 }
             },
         });
@@ -97,4 +108,22 @@ export async function saveProjectFindings(projectId: string, findings: Finding[]
         await tx.store.put(finding);
     }
     await tx.done;
+}
+
+// --- Report Versions ---
+
+export async function getProjectReportVersions(projectId: string): Promise<ReportVersion[]> {
+    const db = await getDB();
+    const versions = await db.getAllFromIndex('reportVersions', 'projectId', projectId);
+    return versions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export async function saveReportVersion(version: ReportVersion): Promise<void> {
+    const db = await getDB();
+    await db.put('reportVersions', version);
+}
+
+export async function deleteReportVersion(id: string): Promise<void> {
+    const db = await getDB();
+    await db.delete('reportVersions', id);
 }

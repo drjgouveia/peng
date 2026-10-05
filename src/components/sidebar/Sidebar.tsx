@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, Filter, FileOutput, BookOpen } from 'lucide-react';
+import { Settings, Filter, FileOutput, BookOpen, Save, History } from 'lucide-react';
 import SidebarHeader from './SidebarHeader';
 import FindingList from './FindingList';
 import type { Finding, Severity, FindingStatus } from '../../types';
@@ -28,6 +28,8 @@ interface SidebarProps {
     onBrowseTemplates: () => void;
     onDeleteFinding: (id: string) => void;
     onDuplicateFinding: (id: string) => void;
+    onCreateVersion: () => void;
+    onViewVersionHistory: () => void;
 }
 
 export default function Sidebar({
@@ -47,6 +49,8 @@ export default function Sidebar({
     onBrowseTemplates,
     onDeleteFinding,
     onDuplicateFinding,
+    onCreateVersion,
+    onViewVersionHistory,
 }: SidebarProps) {
     const [sortMode, setSortMode] = useState<SortMode>('newest');
     const [filterSeverity, setFilterSeverity] = useState<Severity | 'All'>('All');
@@ -148,6 +152,20 @@ export default function Sidebar({
                 >
                     <FileOutput className="w-4 h-4 mr-2" />
                     Generate Report
+                </button>
+                <button
+                    onClick={onCreateVersion}
+                    className="w-full flex items-center text-left text-sm px-3 py-2 rounded-lg transition-colors text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200"
+                >
+                    <Save className="w-4 h-4 mr-2" />
+                    Create Version
+                </button>
+                <button
+                    onClick={onViewVersionHistory}
+                    className="w-full flex items-center text-left text-sm px-3 py-2 rounded-lg transition-colors text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200"
+                >
+                    <History className="w-4 h-4 mr-2" />
+                    Version History
                 </button>
                 <button
                     onClick={onOpenSettings}

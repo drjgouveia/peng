@@ -3,8 +3,10 @@ import { FileText, Layout, Bug, CheckCircle2, FlaskConical, ArrowRightLeft, Book
 import EditorToolbar from './EditorToolbar';
 import FindingTitle from './FindingTitle';
 import ContentBlock from './ContentBlock';
+import LlmSuggestModal from './LlmSuggestModal';
 import { FindingDetail } from '../../templates/default/FindingDetail';
 import type { Finding, Severity, RequestResponseEntry, Endpoint } from '../../types';
+import type { LlmConfig } from '../../lib/llm';
 import CvssCalculatorModal from './CvssCalculatorModal';
 
 const OPTIONAL_SECTIONS = [
@@ -21,11 +23,13 @@ interface EditorProps {
     onUpdateField: (field: keyof Finding, value: string | Endpoint[] | RequestResponseEntry[]) => void;
     onDelete: (id: string) => void;
     onDuplicate: (id: string) => void;
+    llmConfig: LlmConfig | null;
 }
 
-export default function Editor({ selectedFinding, onUpdateField, onDelete, onDuplicate }: EditorProps) {
+export default function Editor({ selectedFinding, onUpdateField, onDelete, onDuplicate, llmConfig }: EditorProps) {
     const [visibleSections, setVisibleSections] = useState<Set<SectionKey>>(new Set());
     const [cvssModalOpen, setCvssModalOpen] = useState(false);
+    const [llmModalOpen, setLlmModalOpen] = useState(false);
 
     useEffect(() => {
         if (!selectedFinding) return;
@@ -89,6 +93,7 @@ export default function Editor({ selectedFinding, onUpdateField, onDelete, onDup
                         onPrint={() => window.print()}
                         onDelete={() => onDelete(selectedFinding.id)}
                         onDuplicate={() => onDuplicate(selectedFinding.id)}
+                        onLlmSuggest={() => setLlmModalOpen(true)}
                     />
                 )}
 
@@ -267,6 +272,15 @@ export default function Editor({ selectedFinding, onUpdateField, onDelete, onDup
                             onUpdateField('severity', severity as Severity);
                         }
                     }}
+                />
+            )}
+
+            {selectedFinding && llmConfig && llmModalOpen && (
+                <LlmSuggestModal
+                    finding={selectedFinding}
+                    config={llmConfig}
+                    onClose={() => setLlmModalOpen(false)}
+                    onApply={(field, value) => onUpdateField(field, value)}
                 />
             )}
         </main>

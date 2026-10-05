@@ -5,12 +5,16 @@ import Editor from './components/editor/Editor';
 import ProjectSettings from './components/settings/ProjectSettings';
 import ProjectDashboard from './components/dashboard/ProjectDashboard';
 import ReportPreview from './components/report/ReportPreview';
+import VersionHistory from './components/report/VersionHistory';
 import TemplateBrowser from './components/templates/TemplateBrowser';
 import { useProjects } from './hooks/useProjects';
 import { useFindings } from './hooks/useFindings';
-import type { Finding, Project, Endpoint, RequestResponseEntry, HttpMethod } from './types';
+import { useReportVersions } from './hooks/useReportVersions';
+import type { Finding, Project, Endpoint, RequestResponseEntry, HttpMethod, ReportVersion } from './types';
 import { createDefaultFinding } from './types';
 import type { FindingTemplate } from './constants';
+import type { LlmConfig } from './lib/llm';
+import { DEFAULT_LLM_CONFIG } from './lib/llm';
 
 interface OldFinding {
     url?: string;
@@ -25,11 +29,25 @@ export default function App() {
   const { projects, isLoading: projectsLoading, createProject, updateProject, deleteProject } = useProjects();
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const { findings, setFindings, isLoading: findingsLoading, lastSaved } = useFindings(activeProjectId);
+  const { versions, saveVersion, deleteVersion, suggestNextVersion } = useReportVersions(activeProjectId);
   const [selectedFindingId, setSelectedFindingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeView, setActiveView] = useState<ActiveView>('editor');
   const [showReport, setShowReport] = useState(false);
   const [showTemplateBrowser, setShowTemplateBrowser] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [showSaveVersionForm, setShowSaveVersionForm] = useState(false);
+  const [versionLabel, setVersionLabel] = useState('');
+  const [versionNotes, setVersionNotes] = useState('');
+  const [savingVersion, setSavingVersion] = useState(false);
+  const [llmConfig, setLlmConfig] = useState<LlmConfig>(() => {
+    try {
+      const stored = localStorage.getItem('peng-llm-config');
+      return stored ? JSON.parse(stored) : DEFAULT_LLM_CONFIG;
+    } catch {
+      return DEFAULT_LLM_CONFIG;
+    }
+  });
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -140,6 +158,41 @@ const handleUpdateFinding = (field: keyof Finding, value: string | Endpoint[] | 
   const handleCreateProject = (name: string) => {
     const project = createProject(name);
     handleSelectProject(project.id);
+  };
+
+  // --- Version handlers ---
+
+  const handleCreateVersion = () => {
+    setShowSaveVersionForm(true);
+  };
+
+  const handleSaveVersion = async () => {
+    if (!activeProject) return;
+    setSavingVersion(true);
+    try {
+      await saveVersion(activeProject, findings, versionLabel, versionNotes);
+      setShowSaveVersionForm(false);
+      setVersionLabel('');
+      setVersionNotes('');
+    } catch (err) {
+      console.error('Failed to save version:', err);
+    } finally {
+      setSavingVersion(false);
+    }
+  };
+
+  const handleViewVersionHistory = () => {
+    setShowVersionHistory(true);
+  };
+
+  const handleRestoreVersion = (restoredProject: Project, restoredFindings: Finding[]) => {
+    updateProject(restoredProject);
+    setFindings(restoredFindings);
+  };
+
+  const handleUpdateLlmConfig = (config: LlmConfig) => {
+    setLlmConfig(config);
+    localStorage.setItem('peng-llm-config', JSON.stringify(config));
   };
 
   // --- Export / Import ---
@@ -260,11 +313,15 @@ const importedFindings: Finding[] = parsed.findings.map((f: Finding) => {
         onGenerateReport={() => setShowReport(true)}
         onDeleteFinding={handleDeleteFinding}
         onDuplicateFinding={handleDuplicateFinding}
+        onCreateVersion={handleCreateVersion}
+        onViewVersionHistory={handleViewVersionHistory}
       />
       {activeView === 'settings' ? (
         <ProjectSettings
           project={activeProject}
           onUpdate={handleUpdateProject}
+          llmConfig={llmConfig}
+          onUpdateLlmConfig={handleUpdateLlmConfig}
         />
       ) : (
         <Editor
@@ -272,6 +329,7 @@ const importedFindings: Finding[] = parsed.findings.map((f: Finding) => {
           onUpdateField={handleUpdateFinding}
           onDelete={handleDeleteFinding}
           onDuplicate={handleDuplicateFinding}
+          llmConfig={llmConfig}
         />
       )}
       {showReport && (
@@ -279,6 +337,10 @@ const importedFindings: Finding[] = parsed.findings.map((f: Finding) => {
           project={activeProject}
           findings={findings}
           onClose={() => setShowReport(false)}
+          onRestoreVersion={(restoredProject, restoredFindings) => {
+            updateProject(restoredProject);
+            setFindings(restoredFindings);
+          }}
         />
       )}
       {showTemplateBrowser && (
@@ -286,6 +348,57 @@ const importedFindings: Finding[] = parsed.findings.map((f: Finding) => {
           onSelect={(template) => handleAddFinding(template)}
           onClose={() => setShowTemplateBrowser(false)}
         />
+      )}
+      {showVersionHistory && activeProject && (
+        <VersionHistory
+          project={activeProject}
+          findings={findings}
+          onClose={() => setShowVersionHistory(false)}
+          onRestore={(version) => {
+            handleRestoreVersion(version.snapshot.project, version.snapshot.findings);
+            setShowVersionHistory(false);
+          }}
+        />
+      )}
+      {showSaveVersionForm && activeProject && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl p-6">
+            <h2 className="text-lg font-semibold text-white mb-1">Create Report Version</h2>
+            <p className="text-xs text-zinc-500 mb-4">
+              Next version: <span className="font-mono text-emerald-400">v{suggestNextVersion(versions)}</span>
+            </p>
+            <input
+              type="text"
+              value={versionLabel}
+              onChange={(e) => setVersionLabel(e.target.value)}
+              placeholder="Version label (e.g., Initial Draft, Client Review)"
+              className="w-full px-3 py-2 text-sm bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-200 placeholder-zinc-500 outline-none focus:border-emerald-500 mb-3"
+              autoFocus
+            />
+            <textarea
+              value={versionNotes}
+              onChange={(e) => setVersionNotes(e.target.value)}
+              placeholder="Notes (optional)..."
+              rows={3}
+              className="w-full px-3 py-2 text-sm bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-200 placeholder-zinc-500 outline-none focus:border-emerald-500 resize-none mb-4"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => { setShowSaveVersionForm(false); setVersionLabel(''); setVersionNotes(''); }}
+                className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveVersion}
+                disabled={savingVersion}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {savingVersion ? 'Saving...' : 'Save Version'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       <ConfirmModal
         open={!!pendingDeleteFindingId}

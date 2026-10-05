@@ -1,14 +1,18 @@
 import { Settings, FileText, Users, Calendar, Shield, Bookmark } from 'lucide-react';
 import RichTextEditor from '../editor/RichTextEditor';
 import ScopeList from './ScopeList';
+import LlmSettings from './LlmSettings';
 import type { Project, Classification } from '../../types';
+import type { LlmConfig } from '../../lib/llm';
 
 interface ProjectSettingsProps {
     project: Project;
     onUpdate: (field: keyof Project, value: string) => void;
+    llmConfig: LlmConfig;
+    onUpdateLlmConfig: (config: LlmConfig) => void;
 }
 
-export default function ProjectSettings({ project, onUpdate }: ProjectSettingsProps) {
+export default function ProjectSettings({ project, onUpdate, llmConfig, onUpdateLlmConfig }: ProjectSettingsProps) {
     return (
         <main className="flex-1 flex flex-col min-w-0 bg-[#09090b] relative print:bg-white print:text-black">
             <div className="flex-1 overflow-y-auto print:overflow-visible">
@@ -161,6 +165,11 @@ export default function ProjectSettings({ project, onUpdate }: ProjectSettingsPr
                                 onChange={(value) => onUpdate('executiveSummary', value)}
                             />
                         </div>
+
+                        <div className="border-t border-zinc-800/50" />
+
+                        {/* LLM Settings */}
+                        <LlmSettings config={llmConfig} onSave={onUpdateLlmConfig} />
 
                     </div>
                 </div>

@@ -107,6 +107,20 @@ export function createDefaultProject(name: string): Project {
     };
 }
 
+export interface ReportVersion {
+    id: string;
+    projectId: string;
+    version: string;
+    label: string;
+    notes: string;
+    createdAt: string;
+    createdBy: string;
+    snapshot: {
+        project: Project;
+        findings: Finding[];
+    };
+}
+
 export function createDefaultFinding(projectId: string): Finding {
     return {
         id: crypto.randomUUID(),

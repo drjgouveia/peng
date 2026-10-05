@@ -1,18 +1,21 @@
 import { useState, useRef } from 'react';
-import { X, Printer, ChevronDown } from 'lucide-react';
+import { X, Printer, ChevronDown, History } from 'lucide-react';
 import { listTemplates } from '../../templates/registry';
 import { buildReportData } from '../../templates/reportTypes';
-import type { Project, Finding } from '../../types';
+import type { Project, Finding, ReportVersion } from '../../types';
+import VersionHistory from './VersionHistory';
 
 interface ReportPreviewProps {
     project: Project;
     findings: Finding[];
     onClose: () => void;
+    onRestoreVersion: (project: Project, findings: Finding[]) => void;
 }
 
-export default function ReportPreview({ project, findings, onClose }: ReportPreviewProps) {
+export default function ReportPreview({ project, findings, onClose, onRestoreVersion }: ReportPreviewProps) {
     const templates = listTemplates();
     const [selectedId, setSelectedId] = useState(templates[0]?.id ?? '');
+    const [showVersions, setShowVersions] = useState(false);
     const reportRef = useRef<HTMLDivElement>(null);
 
     const template = templates.find((t) => t.id === selectedId) ?? templates[0];
@@ -23,6 +26,10 @@ export default function ReportPreview({ project, findings, onClose }: ReportPrev
         document.body.classList.add('report-printing');
         window.print();
         document.body.classList.remove('report-printing');
+    };
+
+    const handleRestore = (version: ReportVersion) => {
+        onRestoreVersion(version.snapshot.project, version.snapshot.findings);
     };
 
     return (
@@ -51,6 +58,13 @@ export default function ReportPreview({ project, findings, onClose }: ReportPrev
                 </div>
                 <div className="flex items-center gap-3">
                     <button
+                        onClick={() => setShowVersions(true)}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg transition-colors"
+                    >
+                        <History className="w-4 h-4" />
+                        Version History
+                    </button>
+                    <button
                         onClick={handlePrint}
                         className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-black bg-white hover:bg-zinc-200 rounded-lg transition-colors"
                     >
@@ -76,6 +90,15 @@ export default function ReportPreview({ project, findings, onClose }: ReportPrev
                     <TemplateComponent data={data} />
                 </div>
             </div>
+
+            {showVersions && (
+                <VersionHistory
+                    project={project}
+                    findings={findings}
+                    onClose={() => setShowVersions(false)}
+                    onRestore={handleRestore}
+                />
+            )}
         </div>
     );
 }
