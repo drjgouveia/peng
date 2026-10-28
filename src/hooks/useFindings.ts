@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getProjectFindings, saveProjectFindings } from '../lib/db';
-import type { Finding } from '../types';
+import { createDefaultFinding, type Finding } from '../types';
 
 const DEBOUNCE_MS = 500;
 
@@ -34,9 +34,12 @@ export function useFindings(projectId: string | null): UseFindingsReturn {
         setIsLoading(true);
         getProjectFindings(projectId)
             .then((stored) => {
+                // Normalize each finding against defaults so fields added later
+                // (e.g. targetId) exist on older records
+                const normalized = stored.map((f) => ({ ...createDefaultFinding(projectId), ...f }));
                 // Sort by createdAt descending (newest first)
-                stored.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-                setFindings(stored);
+                normalized.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                setFindings(normalized);
             })
             .catch((err) => {
                 console.error('Failed to load findings:', err);

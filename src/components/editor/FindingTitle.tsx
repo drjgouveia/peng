@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { Activity, CircleDot, Link2, Tag, Server, Hash, ShieldAlert, List, BarChart3, Plus } from 'lucide-react';
+import { Activity, CircleDot, Link2, Tag, Server, Hash, ShieldAlert, List, BarChart3, Plus, Crosshair } from 'lucide-react';
 import { SEVERITY_COLORS } from '../../constants';
 import { autoResize } from '../../hooks/useAutoResize';
-import type { Severity, FindingStatus, Finding, Endpoint, HttpMethod, RequestResponseEntry } from '../../types';
+import type { Severity, FindingStatus, Finding, Endpoint, HttpMethod, RequestResponseEntry, ScopeItem } from '../../types';
 
 const SEVERITIES: Severity[] = ['Critical', 'High', 'Medium', 'Low', 'Info'];
 
@@ -52,14 +52,16 @@ function getCvssLabel(value: string): string {
 
 interface FindingTitleProps {
     finding: Finding;
+    targets?: ScopeItem[]; // in-scope targets; when provided, enables target selection (multi-target projects)
     onUpdate: (field: keyof Finding, value: string | Endpoint[] | RequestResponseEntry[]) => void;
     onOpenCvssCalculator?: () => void;
 }
 
-export default function FindingTitle({ finding, onUpdate, onOpenCvssCalculator }: FindingTitleProps) {
+export default function FindingTitle({ finding, targets, onUpdate, onOpenCvssCalculator }: FindingTitleProps) {
     const sevDropdown = useDropdown();
     const statusDropdown = useDropdown();
     const addDropdown = useDropdown();
+    const targetDropdown = useDropdown();
     const [methodDropdownIndex, setMethodDropdownIndex] = useState<number | null>(null);
     const methodDropdownRef = useRef<HTMLDivElement>(null);
     const [visibleProps, setVisibleProps] = useState<Set<OptionalKey>>(() => {
@@ -171,6 +173,35 @@ export default function FindingTitle({ finding, onUpdate, onOpenCvssCalculator }
                         <span className="text-[10px] text-amber-400/80 ml-1">⚠ CVSS suggests {getCvssLabel(finding.cvss)}</span>
                     )}
                 </div>
+
+                {/* Target (multi-target projects) */}
+                {targets && targets.length > 0 && (
+                    <div className="flex items-center group min-h-[34px] -mx-2 rounded-md hover:bg-zinc-800/40 transition-colors">
+                        <div className="flex items-center gap-1.5 text-xs text-zinc-500 w-28 px-2 shrink-0">
+                            <Crosshair className="w-3.5 h-3.5" /><span>Target</span>
+                        </div>
+                        <div className="relative" ref={targetDropdown.ref}>
+                            <button onClick={() => targetDropdown.setOpen(!targetDropdown.open)}
+                                className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded transition-colors hover:bg-zinc-700/50 ${finding.targetId ? 'text-zinc-300' : 'text-zinc-600'}`}>
+                                {targets.find((t) => t.id === finding.targetId)?.value || 'Select target'}
+                            </button>
+                            {targetDropdown.open && (
+                                <div className="absolute top-full left-0 mt-1 z-50 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl py-1 min-w-[220px] max-h-64 overflow-y-auto">
+                                    <div className="px-2.5 py-1.5 text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Select target</div>
+                                    {targets.map((t) => (
+                                        <button key={t.id} onClick={() => { onUpdate('targetId', t.id); targetDropdown.setOpen(false); }}
+                                            className={`w-full flex items-center gap-2 text-left text-xs px-2.5 py-1.5 transition-colors rounded-sm mx-0.5 ${t.id === finding.targetId ? 'bg-zinc-800' : 'hover:bg-zinc-800/60'}`}
+                                            style={{ width: 'calc(100% - 4px)' }}>
+                                            <span className="w-2 h-2 rounded-sm bg-blue-400 shrink-0" />
+                                            <span className="font-mono truncate">{t.value}</span>
+                                            <span className="text-[10px] text-zinc-600 ml-auto shrink-0">{t.type}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 {/* Endpoints */}
                 {(finding.endpoints.length > 0 && (

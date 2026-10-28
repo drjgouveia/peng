@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Settings, FileText, Users, Calendar, Shield, Bookmark, Bot, Loader2, Wrench, Boxes, Flag } from 'lucide-react';
+import { Settings, FileText, Users, Calendar, Shield, Bookmark, Bot, Loader2, Wrench, Boxes, Flag, Target } from 'lucide-react';
 import RichTextEditor from '../editor/RichTextEditor';
 import ScopeList from './ScopeList';
 import LlmSettings from './LlmSettings';
-import type { Project, Classification, Finding } from '../../types';
+import type { Project, Finding, ProjectTargetType } from '../../types';
+import { parseScopeItems, stringifyScopeItems } from '../../types';
 import type { LlmConfig } from '../../lib/llm';
 import { generateExecutiveSummary } from '../../lib/llm';
 
@@ -17,6 +18,17 @@ interface ProjectSettingsProps {
 
 export default function ProjectSettings({ project, findings, onUpdate, llmConfig, onUpdateLlmConfig }: ProjectSettingsProps) {
     const [generatingSummary, setGeneratingSummary] = useState(false);
+
+    // Multi-target projects: one editor per in-scope target
+    const multi = project.targetType === 'multi-target';
+    const targets = multi ? parseScopeItems(project.scope).filter((t) => t.included) : [];
+
+    const updateTargetField = (targetId: string, field: 'executiveSummary' | 'conclusion' | 'testType', value: string) => {
+        const items = parseScopeItems(project.scope).map((t) =>
+            t.id === targetId ? { ...t, [field]: value } : t
+        );
+        onUpdate('scope', stringifyScopeItems(items));
+    };
 
     const handleGenerateSummary = async () => {
         setGeneratingSummary(true);
@@ -127,8 +139,8 @@ export default function ProjectSettings({ project, findings, onUpdate, llmConfig
                             </div>
                         </div>
 
-                        {/* Version, Classification & Test Type */}
-                        <div className="grid grid-cols-3 gap-6">
+                        {/* Version, Test Type & Project Type */}
+                        <div className={`grid ${multi ? 'grid-cols-2' : 'grid-cols-3'} gap-6`}>
                             <div>
                                 <label className="flex items-center gap-2 text-sm font-medium text-zinc-400 mb-2">
                                     <Bookmark className="w-4 h-4" /> Report Version
@@ -142,47 +154,77 @@ export default function ProjectSettings({ project, findings, onUpdate, llmConfig
                                 />
                             </div>
                             <div>
-                                <label className="flex items-center gap-2 text-sm font-medium text-zinc-400 mb-2">
-                                    <Shield className="w-4 h-4" /> Classification
-                                </label>
-                                <select
-                                    value={project.classification}
-                                    onChange={(e) => onUpdate('classification', e.target.value as Classification)}
-                                    className="w-full bg-zinc-900/50 border border-zinc-800 rounded-lg px-4 py-3 text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors appearance-none cursor-pointer"
-                                >
-                                    <option value="Confidential" className="bg-zinc-900">Confidential</option>
-                                    <option value="Internal" className="bg-zinc-900">Internal</option>
-                                    <option value="Public" className="bg-zinc-900">Public</option>
-                                </select>
+                                {!multi && (
+                                    <>
+                                        <label className="flex items-center gap-2 text-sm font-medium text-zinc-400 mb-2">
+                                            <Boxes className="w-4 h-4" /> Test Type
+                                        </label>
+                                        <select
+                                            value={project.testType}
+                                            onChange={(e) => onUpdate('testType', e.target.value)}
+                                            className="w-full bg-zinc-900/50 border border-zinc-800 rounded-lg px-4 py-3 text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors appearance-none cursor-pointer"
+                                        >
+                                            <option value="" className="bg-zinc-900">Not specified</option>
+                                            <option value="Black-box" className="bg-zinc-900">Black-box</option>
+                                            <option value="Grey-box" className="bg-zinc-900">Grey-box</option>
+                                            <option value="White-box" className="bg-zinc-900">White-box</option>
+                                        </select>
+                                    </>
+                                )}
                             </div>
                             <div>
                                 <label className="flex items-center gap-2 text-sm font-medium text-zinc-400 mb-2">
-                                    <Boxes className="w-4 h-4" /> Test Type
+                                    <Target className="w-4 h-4" /> Project Type
                                 </label>
                                 <select
-                                    value={project.testType}
-                                    onChange={(e) => onUpdate('testType', e.target.value)}
+                                    value={project.targetType}
+                                    onChange={(e) => onUpdate('targetType', e.target.value as ProjectTargetType)}
                                     className="w-full bg-zinc-900/50 border border-zinc-800 rounded-lg px-4 py-3 text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors appearance-none cursor-pointer"
                                 >
-                                    <option value="" className="bg-zinc-900">Not specified</option>
-                                    <option value="Black-box" className="bg-zinc-900">Black-box</option>
-                                    <option value="Grey-box" className="bg-zinc-900">Grey-box</option>
-                                    <option value="White-box" className="bg-zinc-900">White-box</option>
+                                    <option value="single-target" className="bg-zinc-900">Single target</option>
+                                    <option value="multi-target" className="bg-zinc-900">Multi target</option>
                                 </select>
                             </div>
                         </div>
 
                         <div className="border-t border-zinc-800/50" />
 
-                        {/* Scope */}
+                        {/* Scope / Targets */}
                         <div>
                             <h3 className="flex items-center text-lg font-semibold text-zinc-100 print:text-black mb-3">
                                 <Shield className="w-5 h-5 mr-2 text-blue-400/70 print:hidden" /> Scope
                             </h3>
+                            {project.targetType === 'multi-target' && (
+                                <p className="text-xs text-zinc-500 mb-3">
+                                    Each in-scope target represents a target that will be used to group findings in the report. Select a target on each finding to assign it.
+                                </p>
+                            )}
                             <ScopeList
                                 value={project.scope}
                                 onChange={(value) => onUpdate('scope', value)}
                             />
+                            {project.targetType === 'multi-target' && targets.length > 0 && (
+                                <div className="mt-6 space-y-4">
+                                    <h4 className="flex items-center gap-2 text-sm font-medium text-zinc-400">
+                                        <Boxes className="w-4 h-4" /> Test Type per target
+                                    </h4>
+                                    {targets.map((t) => (
+                                        <div key={t.id} className="flex items-center gap-4">
+                                            <span className="w-64 shrink-0 font-mono text-xs text-zinc-300 truncate" title={t.value}>{t.value || '(unnamed target)'}</span>
+                                            <select
+                                                value={t.testType || ''}
+                                                onChange={(e) => updateTargetField(t.id, 'testType', e.target.value)}
+                                                className="flex-1 bg-zinc-900/50 border border-zinc-800 rounded-lg px-4 py-2.5 text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors appearance-none cursor-pointer"
+                                            >
+                                                <option value="" className="bg-zinc-900">Not specified</option>
+                                                <option value="Black-box" className="bg-zinc-900">Black-box</option>
+                                                <option value="Grey-box" className="bg-zinc-900">Grey-box</option>
+                                                <option value="White-box" className="bg-zinc-900">White-box</option>
+                                            </select>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {/* Tools / Resources Used */}
@@ -216,11 +258,29 @@ export default function ProjectSettings({ project, findings, onUpdate, llmConfig
                                     {generatingSummary ? 'Generating...' : 'Generate with AI'}
                                 </button>
                             </div>
+                            {multi && (
+                                <p className="text-xs text-zinc-500 mb-3">General overview of the assessment. Add a summary per target below.</p>
+                            )}
                             <RichTextEditor
                                 content={project.executiveSummary}
                                 placeholder="High-level overview of the assessment for non-technical stakeholders (C-level executives)..."
                                 onChange={(value) => onUpdate('executiveSummary', value)}
                             />
+                            {multi && targets.map((t, i) => (
+                                <div key={t.id} className="mt-8">
+                                    <h4 className="flex items-center gap-2 text-sm font-semibold text-zinc-100 mb-2">
+                                        <Target className="w-4 h-4 text-blue-400/70" />
+                                        <span className="text-zinc-500 font-mono">1.{i + 1}</span>
+                                        <span className="break-all">{t.value}</span>
+                                        <span className="text-[10px] font-normal text-zinc-600">{t.type}</span>
+                                    </h4>
+                                    <RichTextEditor
+                                        content={t.executiveSummary || ''}
+                                        placeholder={`Executive summary for ${t.value || 'this target'}...`}
+                                        onChange={(value) => updateTargetField(t.id, 'executiveSummary', value)}
+                                    />
+                                </div>
+                            ))}
                         </div>
 
                         {/* Conclusion */}
@@ -228,11 +288,29 @@ export default function ProjectSettings({ project, findings, onUpdate, llmConfig
                             <h3 className="flex items-center text-lg font-semibold text-zinc-100 print:text-black mb-3">
                                 <Flag className="w-5 h-5 mr-2 text-rose-400/70 print:hidden" /> Conclusion
                             </h3>
+                            {multi && (
+                                <p className="text-xs text-zinc-500 mb-3">General conclusion (optional). Add a conclusion per target below.</p>
+                            )}
                             <RichTextEditor
                                 content={project.conclusion}
                                 placeholder="Overall conclusion of the assessment, next steps, and closing remarks (optional - omitted from the report if empty)..."
                                 onChange={(value) => onUpdate('conclusion', value)}
                             />
+                            {multi && targets.map((t, i) => (
+                                <div key={t.id} className="mt-8">
+                                    <h4 className="flex items-center gap-2 text-sm font-semibold text-zinc-100 mb-2">
+                                        <Target className="w-4 h-4 text-blue-400/70" />
+                                        <span className="text-zinc-500 font-mono">5.{i + 1}</span>
+                                        <span className="break-all">{t.value}</span>
+                                        <span className="text-[10px] font-normal text-zinc-600">{t.type}</span>
+                                    </h4>
+                                    <RichTextEditor
+                                        content={t.conclusion || ''}
+                                        placeholder={`Conclusion for ${t.value || 'this target'}...`}
+                                        onChange={(value) => updateTargetField(t.id, 'conclusion', value)}
+                                    />
+                                </div>
+                            ))}
                         </div>
 
                         <div className="border-t border-zinc-800/50" />

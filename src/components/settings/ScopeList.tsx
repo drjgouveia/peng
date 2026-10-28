@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, X, Globe, Server, Wifi, Smartphone, MoreHorizontal, ShieldCheck, ShieldOff } from 'lucide-react';
+import { Plus, X, Globe, Server, Wifi, Smartphone, MoreHorizontal, ShieldCheck, ShieldOff, Bot } from 'lucide-react';
 import type { ScopeItem, ScopeType } from '../../types';
 import { parseScopeItems, stringifyScopeItems } from '../../types';
 
@@ -8,6 +8,7 @@ const SCOPE_TYPES: { value: ScopeType; label: string; icon: typeof Globe }[] = [
     { value: 'API', label: 'API', icon: Server },
     { value: 'Network', label: 'Network', icon: Wifi },
     { value: 'Mobile', label: 'Mobile', icon: Smartphone },
+    { value: 'AI', label: 'AI', icon: Bot },
     { value: 'Other', label: 'Other', icon: MoreHorizontal },
 ];
 

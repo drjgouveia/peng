@@ -6,6 +6,7 @@ export function ScopeSection({ data }: { data: ReportData }) {
     const items = parseScopeItems(data.project.scope);
     const inScope = items.filter((i) => i.included);
     const outOfScope = items.filter((i) => !i.included);
+    const multi = data.project.targetType === 'multi-target';
 
     const testType = data.project.testType;
 
@@ -25,8 +26,8 @@ export function ScopeSection({ data }: { data: ReportData }) {
         <div className="report-page px-16 py-16">
             <h2 className="text-3xl font-bold mb-8 pb-4 border-b-2 border-black">2. Scope</h2>
 
-            {/* Test Type */}
-            {testType && (
+            {/* Test Type (global; multi-target projects show it per target in the In Scope table) */}
+            {!multi && testType && (
                 <p className="mb-6 text-sm"><span className="font-bold">Test Type:</span> {testType}</p>
             )}
 
@@ -39,6 +40,7 @@ export function ScopeSection({ data }: { data: ReportData }) {
                             <tr className="border-b-2 border-black">
                                 <th className="text-left py-2 font-bold w-28">Type</th>
                                 <th className="text-left py-2 font-bold">Target</th>
+                                {multi && <th className="text-left py-2 font-bold w-24">Test Type</th>}
                             </tr>
                         </thead>
                         <tbody>
@@ -48,6 +50,7 @@ export function ScopeSection({ data }: { data: ReportData }) {
                                         {item.type}
                                     </td>
                                     <td className="py-2 font-mono text-sm break-all">{item.value}</td>
+                                    {multi && <td className="py-2 text-gray-500">{item.testType || '-'}</td>}
                                 </tr>
                             ))}
                         </tbody>

@@ -4,13 +4,22 @@ import { captionFigures } from '../../lib/figures';
 interface FindingDetailProps {
     finding: Finding;
     index: number;
+    /** Full finding number, e.g. "4.1" (single-target) or "4.1.2" (multi-target). Defaults to `4.${index + 1}`. */
+    number?: string;
+    /** When set, renders a per-target group heading ("4.1 <target>") above this finding. */
+    groupNumber?: string;
+    groupTitle?: string;
+    groupSub?: string;
+    isGroupStart?: boolean;
 }
 
-export function FindingDetail({ finding, index }: FindingDetailProps) {
+export function FindingDetail({ finding, index, number, groupNumber, groupTitle, groupSub, isGroupStart }: FindingDetailProps) {
     const f = finding;
 
+    const findingNumber = number ?? `4.${index + 1}`;
+
     // Number figures sequentially across all content sections of this finding
-    const prefix = `4.${index + 1}`;
+    const prefix = findingNumber;
     const sectionHtmls = [f.description, f.businessSummary, f.impact, f.remediation, f.references, f.poc];
     const imgCounts = sectionHtmls.map((html) => (html.match(/<img\b/g) || []).length);
     const starts = imgCounts.map((_, i) => imgCounts.slice(0, i).reduce((a, b) => a + b, 1));
@@ -20,11 +29,21 @@ export function FindingDetail({ finding, index }: FindingDetailProps) {
 
     return (
         <div className="report-page px-16 py-16">
+            {/* Per-target group heading (multi-target projects) */}
+            {groupNumber && isGroupStart && (
+                <div className="mb-10">
+                    <h3 className="text-3xl font-bold border-b-2 border-black pb-3">
+                        <span className="text-gray-400 mr-2">{groupNumber}</span>
+                        {groupTitle || 'Target'}
+                        {groupSub && <span className="text-xs text-gray-400 font-normal ml-2">({groupSub})</span>}
+                    </h3>
+                </div>
+            )}
             {/* Finding Header */}
-            <div className="mb-8 pb-4 border-b-2 border-black">
+            <div className={`pb-4 border-b-2 border-black ${groupNumber && isGroupStart ? 'mb-8' : 'mb-8'}`}>
                 <div className="flex items-baseline justify-between">
                     <h3 className="text-2xl font-bold">
-                        <span className="text-gray-400 mr-2">4.{index + 1}</span>
+                        <span className="text-gray-400 mr-2">{findingNumber}</span>
                         {f.title || 'Untitled Finding'}
                     </h3>
                     <span className={`text-sm font-bold uppercase px-3 py-1 rounded ${f.severity === 'Critical' ? 'bg-red-100 text-red-700' :

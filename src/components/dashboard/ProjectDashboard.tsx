@@ -189,10 +189,6 @@ export default function ProjectDashboard({
                                                     <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{project.assessmentDateStart}</span>
                                                 )}
                                                 <span>v{project.reportVersion}</span>
-                                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium uppercase ${project.classification === 'Confidential' ? 'bg-red-500/10 text-red-400'
-                                                    : project.classification === 'Internal' ? 'bg-yellow-500/10 text-yellow-400'
-                                                        : 'bg-green-500/10 text-green-400'
-                                                    }`}>{project.classification}</span>
                                             </div>
                                         </div>
                                     );

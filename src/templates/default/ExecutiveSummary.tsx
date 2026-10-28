@@ -1,5 +1,6 @@
 import type { ReportData } from '../reportTypes';
 import type { Severity } from '../../types';
+import { parseScopeItems } from '../../types';
 import { captionFigures } from '../../lib/figures';
 
 const SEV_COLORS: Record<Severity, string> = {
@@ -8,6 +9,11 @@ const SEV_COLORS: Record<Severity, string> = {
 
 export function ExecutiveSummary({ data }: { data: ReportData }) {
     const { project, stats } = data;
+    // Multi-target projects: per-target summaries as subsections 1.1, 1.2, ...
+    const targetSummaries =
+        project.targetType === 'multi-target'
+            ? parseScopeItems(project.scope).filter((t) => t.included && t.executiveSummary)
+            : [];
 
     return (
         <div className="report-page px-16 py-16">
@@ -72,6 +78,22 @@ export function ExecutiveSummary({ data }: { data: ReportData }) {
                         </div>
                     ))}
             </div>
+
+            {/* Per-target summaries (multi-target projects) */}
+            {targetSummaries.length > 0 && (
+                <div className="mt-12 space-y-12">
+                    {targetSummaries.map((t, i) => (
+                        <div key={t.id}>
+                            <h3 className="text-xl font-bold border-b border-black pb-2 mb-4">
+                                <span className="text-gray-400 mr-2">{`1.${i + 1}`}</span>
+                                {t.value}
+                                {t.type && <span className="text-xs text-gray-400 font-normal ml-2">({t.type})</span>}
+                            </h3>
+                            <div className="prose max-w-none text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: captionFigures(t.executiveSummary!, `1.${i + 1}`).html }} />
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

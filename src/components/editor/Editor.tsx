@@ -5,7 +5,8 @@ import FindingTitle from './FindingTitle';
 import ContentBlock from './ContentBlock';
 import LlmSuggestModal from './LlmSuggestModal';
 import { FindingDetail } from '../../templates/default/FindingDetail';
-import type { Finding, Severity, RequestResponseEntry, Endpoint } from '../../types';
+import type { Finding, Severity, RequestResponseEntry, Endpoint, Project } from '../../types';
+import { parseScopeItems } from '../../types';
 import type { LlmConfig } from '../../lib/llm';
 import { redactPii } from '../../lib/llm';
 import CvssCalculatorModal from './CvssCalculatorModal';
@@ -24,13 +25,14 @@ type SectionKey = typeof OPTIONAL_SECTIONS[number]['key'] | 'requestResponse';
 
 interface EditorProps {
     selectedFinding: Finding | null;
+    project: Project | null;
     onUpdateField: (field: keyof Finding, value: string | Endpoint[] | RequestResponseEntry[]) => void;
     onDelete: (id: string) => void;
     onDuplicate: (id: string) => void;
     llmConfig: LlmConfig | null;
 }
 
-export default function Editor({ selectedFinding, onUpdateField, onDelete, onDuplicate, llmConfig }: EditorProps) {
+export default function Editor({ selectedFinding, project, onUpdateField, onDelete, onDuplicate, llmConfig }: EditorProps) {
     const [visibleSections, setVisibleSections] = useState<Set<SectionKey>>(new Set());
     const [cvssModalOpen, setCvssModalOpen] = useState(false);
     const [llmModalOpen, setLlmModalOpen] = useState(false);
@@ -121,6 +123,11 @@ export default function Editor({ selectedFinding, onUpdateField, onDelete, onDup
                         <div className="max-w-4xl mx-auto px-12 py-16 print:p-0 print:max-w-none">
                             <FindingTitle
                                 finding={selectedFinding}
+                                targets={
+                                    project && project.targetType === 'multi-target'
+                                        ? parseScopeItems(project.scope).filter((t) => t.included)
+                                        : undefined
+                                }
                                 onUpdate={onUpdateField}
                                 onOpenCvssCalculator={() => setCvssModalOpen(true)}
                             />

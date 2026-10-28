@@ -228,6 +228,7 @@ const handleUpdateFinding = (field: keyof Finding, value: string | Endpoint[] | 
                 ...f,
                 id: crypto.randomUUID(),
                 projectId: imported.id,
+                targetId: f.targetId || '',
                 status: f.status || 'Open',
                 createdAt: f.createdAt || new Date().toISOString(),
                 endpoints: f.endpoints || [],
@@ -333,6 +334,7 @@ const handleUpdateFinding = (field: keyof Finding, value: string | Endpoint[] | 
       ) : (
         <Editor
           selectedFinding={selectedFinding}
+          project={activeProject}
           onUpdateField={handleUpdateFinding}
           onDelete={handleDeleteFinding}
           onDuplicate={handleDuplicateFinding}

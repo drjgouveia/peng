@@ -1,14 +1,19 @@
 export type Severity = 'Critical' | 'High' | 'Medium' | 'Low' | 'Info';
-export type Classification = 'Confidential' | 'Internal' | 'Public';
 export type FindingStatus = 'Open' | 'Fixed' | 'Accepted Risk';
-export type ScopeType = 'Web App' | 'API' | 'Network' | 'Mobile' | 'Other';
+export type ScopeType = 'Web App' | 'API' | 'Network' | 'Mobile' | 'AI' | 'Other';
 export type TestType = 'Black-box' | 'Grey-box' | 'White-box';
+export type ProjectTargetType = 'single-target' | 'multi-target';
 
 export interface ScopeItem {
     id: string;
     value: string;
     type: ScopeType;
     included: boolean; // true = In Scope, false = Out of Scope
+    // Per-target narrative (multi-target projects, in-scope targets only)
+    executiveSummary?: string;
+    conclusion?: string;
+    // Per-target test methodology (multi-target projects; '' = not specified)
+    testType?: string;
 }
 
 export function parseScopeItems(scope: string): ScopeItem[] {
@@ -32,8 +37,8 @@ export interface Project {
     assessmentDateEnd: string;
     reportDate: string;
     reportVersion: string;
-    classification: Classification;
     testType: string; // '' = not specified
+    targetType: ProjectTargetType; // single-target = one target; multi-target = findings grouped per target
     scope: string;
     toolsResources: string;
     executiveSummary: string;
@@ -62,6 +67,7 @@ export interface Finding {
     title: string;
     severity: Severity;
     status: FindingStatus;
+    targetId: string; // id of the in-scope ScopeItem (target) this finding belongs to ('' when single-target/unassigned)
     // Metadata properties
     endpoints: Endpoint[];
     parameter: string;
@@ -103,8 +109,8 @@ export function createDefaultProject(name: string): Project {
         assessmentDateEnd: '',
         reportDate: now.split('T')[0],
         reportVersion: '1.0',
-        classification: 'Confidential',
         testType: '',
+        targetType: 'single-target',
         scope: '',
         toolsResources: '',
         executiveSummary: '',
@@ -135,6 +141,7 @@ export function createDefaultFinding(projectId: string): Finding {
         title: '',
         severity: 'Medium',
         status: 'Open',
+        targetId: '',
         endpoints: [],
         parameter: '',
         affectedHost: '',

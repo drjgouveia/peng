@@ -5,12 +5,8 @@ export function CoverPage({ data }: { data: ReportData }) {
 
     return (
         <div className="report-page flex flex-col justify-between min-h-[100vh] px-16 py-20">
-            {/* Classification */}
-            <div className="text-center">
-                <span className="inline-block px-4 py-1 text-xs font-bold uppercase tracking-[0.2em] border-2 border-black rounded">
-                    {project.classification}
-                </span>
-            </div>
+            {/* Top spacer */}
+            <div />
 
             {/* Center content */}
             <div className="text-center flex-1 flex flex-col justify-center">
