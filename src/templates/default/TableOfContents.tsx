@@ -24,6 +24,8 @@ export function TableOfContents({ data }: { data: ReportData }) {
                         <span className="text-xs text-gray-400 uppercase font-semibold">{f.severity}</span>
                     </div>
                 ))}
+
+                {data.project.conclusion && <TocEntry num="5" title="Conclusion" />}
             </div>
         </div>
     );

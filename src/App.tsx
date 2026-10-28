@@ -10,6 +10,7 @@ import TemplateBrowser from './components/templates/TemplateBrowser';
 import { useProjects } from './hooks/useProjects';
 import { useFindings } from './hooks/useFindings';
 import { useReportVersions } from './hooks/useReportVersions';
+import { saveProjectFindings } from './lib/db';
 import type { Finding, Project, Endpoint, RequestResponseEntry, HttpMethod, ReportVersion } from './types';
 import { createDefaultFinding } from './types';
 import type { FindingTemplate } from './constants';
@@ -212,17 +213,16 @@ const handleUpdateFinding = (field: keyof Finding, value: string | Endpoint[] | 
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const parsed = JSON.parse(event.target?.result as string);
-        if (parsed.project && parsed.findings) {
+        if (parsed.project && Array.isArray(parsed.findings)) {
           // Create a new project from imported data
           const imported = createProject(parsed.project.name || 'Imported Project');
           // Update imported project fields
           const full: Project = { ...imported, ...parsed.project, id: imported.id, createdAt: imported.createdAt, updatedAt: imported.updatedAt };
-          updateProject(full);
           // Assign findings to the new project
-const importedFindings: Finding[] = parsed.findings.map((f: Finding) => {
+          const importedFindings: Finding[] = parsed.findings.map((f: Finding) => {
             const old = f as unknown as OldFinding;
             const migrated: Finding = {
                 ...f,
@@ -241,10 +241,16 @@ const importedFindings: Finding[] = parsed.findings.map((f: Finding) => {
                 migrated.requestResponses = [{ id: crypto.randomUUID(), request: '', response: old.requestResponse }];
             }
             return migrated;
-        });
-          // We need to select the project first, then set findings
+          });
+          // Persist findings to the DB *before* switching projects, so the
+          // per-project load effect picks them up (avoids the race where the
+          // empty initial load overwrites the imported findings)
+          await saveProjectFindings(imported.id, importedFindings);
+          updateProject(full);
           setActiveProjectId(imported.id);
-          setTimeout(() => setFindings(importedFindings), 100);
+          setSelectedFindingId(null);
+        } else {
+          alert('Invalid or corrupted JSON file!');
         }
       } catch {
         alert('Invalid or corrupted JSON file!');
@@ -319,6 +325,7 @@ const importedFindings: Finding[] = parsed.findings.map((f: Finding) => {
       {activeView === 'settings' ? (
         <ProjectSettings
           project={activeProject}
+          findings={findings}
           onUpdate={handleUpdateProject}
           llmConfig={llmConfig}
           onUpdateLlmConfig={handleUpdateLlmConfig}

@@ -6,7 +6,7 @@
 
 <p align="center">
   Open-source penetration test report writing tool.<br/>
-  Write, manage, and export professional pentest reports — fast.
+  Write, manage, and export professional pentest reports - fast.
 </p>
 
 <p align="center">
@@ -22,18 +22,18 @@
 
 ## Why peng?
 
-Most pentest report tools are either expensive SaaS platforms or clunky desktop apps. **peng** is a free, open-source alternative that runs entirely in your browser. Your data never touches a server — everything stays local in your browser's storage.
+Most pentest report tools are either expensive SaaS platforms or clunky desktop apps. **peng** is a free, open-source alternative that runs entirely in your browser. Your data never touches a server - everything stays local in your browser's storage.
 
 ## Features
 
-- **45+ Finding Templates** — Pre-written descriptions, impact statements, and remediation steps for common vulnerabilities (SQLi, XSS, SSRF, IDOR, and more)
-- **Rich Text Editor** — Full WYSIWYG editor with formatting, images, code blocks, and lists
-- **Report Export** — Print-ready report generation and JSON data export/import
-- **Multi-Project Support** — Manage multiple assessments independently
-- **CVSS Scoring** — Built-in CVSS v3.1 score input with automatic severity mapping
-- **Metadata Fields** — Endpoint, parameter, affected host, port, CVE, CWE per finding
-- **Offline-First** — No cloud, no accounts, no servers. 100% client-side with IndexedDB storage
-- **Dark Theme** — Professional dark UI designed for long assessment sessions
+- **45+ Finding Templates** - Pre-written descriptions, impact statements, and remediation steps for common vulnerabilities (SQLi, XSS, SSRF, IDOR, and more)
+- **Rich Text Editor** - Full WYSIWYG editor with formatting, images, code blocks, and lists
+- **Report Export** - Print-ready report generation and JSON data export/import
+- **Multi-Project Support** - Manage multiple assessments independently
+- **CVSS Scoring** - Built-in CVSS v3.1 score input with automatic severity mapping
+- **Metadata Fields** - Endpoint, parameter, affected host, port, CVE, CWE per finding
+- **Offline-First** - No cloud, no accounts, no servers. 100% client-side with IndexedDB storage
+- **Dark Theme** - Professional dark UI designed for long assessment sessions
 
 ## Getting Started
 
@@ -64,11 +64,11 @@ The production build will be in the `dist/` directory. You can deploy it to any 
 
 ## Usage
 
-1. **Create a Project** — Click "New Project" and give it a name (e.g., "Acme Corp Q1 2026")
-2. **Add Findings** — Use the template browser to pick from 45+ pre-written templates, or create a blank finding
-3. **Edit Details** — Use the rich text editor to customize descriptions, impact, remediation, and proof of concept
-4. **Add Metadata** — Click "Add property" to include endpoint, parameters, CVSS score, CVE/CWE references
-5. **Export** — Generate a print-ready report or export as JSON for backup/sharing
+1. **Create a Project** - Click "New Project" and give it a name (e.g., "Acme Corp Q1 2026")
+2. **Add Findings** - Use the template browser to pick from 45+ pre-written templates, or create a blank finding
+3. **Edit Details** - Use the rich text editor to customize descriptions, impact, remediation, and proof of concept
+4. **Add Metadata** - Click "Add property" to include endpoint, parameters, CVSS score, CVE/CWE references
+5. **Export** - Generate a print-ready report or export as JSON for backup/sharing
 
 ## Template Categories
 
@@ -92,11 +92,11 @@ The production build will be in the `dist/` directory. You can deploy it to any 
 ## Tech Stack
 
 - **React** + **TypeScript**
-- **Vite** — Build tool
-- **Tailwind CSS** — Styling
-- **Tiptap** — Rich text editor
-- **IndexedDB** — Client-side storage
-- **Lucide** — Icons
+- **Vite** - Build tool
+- **Tailwind CSS** - Styling
+- **Tiptap** - Rich text editor
+- **IndexedDB** - Client-side storage
+- **Lucide** - Icons
 
 ## Contributing
 

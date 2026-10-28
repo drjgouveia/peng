@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Layout, Bug, CheckCircle2, FlaskConical, ArrowRightLeft, BookOpen, StickyNote, Plus, X } from 'lucide-react';
+import { FileText, Layout, Bug, CheckCircle2, FlaskConical, ArrowRightLeft, BookOpen, StickyNote, Plus, X, Loader2, ShieldCheck } from 'lucide-react';
 import EditorToolbar from './EditorToolbar';
 import FindingTitle from './FindingTitle';
 import ContentBlock from './ContentBlock';
@@ -7,11 +7,15 @@ import LlmSuggestModal from './LlmSuggestModal';
 import { FindingDetail } from '../../templates/default/FindingDetail';
 import type { Finding, Severity, RequestResponseEntry, Endpoint } from '../../types';
 import type { LlmConfig } from '../../lib/llm';
+import { redactPii } from '../../lib/llm';
 import CvssCalculatorModal from './CvssCalculatorModal';
+import LlmAdjustModal from './LlmAdjustModal';
 
 const OPTIONAL_SECTIONS = [
     { key: 'poc' as const, label: 'Proof of Concept', icon: FlaskConical, iconClass: 'text-purple-400/70', placeholder: 'Step-by-step instructions to reproduce the vulnerability...' },
     { key: 'businessSummary' as const, label: 'Business Summary', icon: FileText, iconClass: 'text-indigo-400/70', placeholder: 'Business impact and context...' },
+    { key: 'impact' as const, label: 'Impact', icon: Bug, iconClass: 'text-red-400/70', placeholder: 'What are the consequences if this vulnerability is successfully exploited?' },
+    { key: 'remediation' as const, label: 'Remediation', icon: CheckCircle2, iconClass: 'text-emerald-400/70', placeholder: 'Recommendations for software developers / system administrators to fix the vulnerability...' },
     { key: 'references' as const, label: 'References', icon: BookOpen, iconClass: 'text-amber-400/70', placeholder: 'OWASP links, vendor advisories, CWE references, related articles...' },
     { key: 'notes' as const, label: 'Notes', icon: StickyNote, iconClass: 'text-zinc-400/70', placeholder: 'Internal notes (not included in final report)...' },
 ];
@@ -30,6 +34,8 @@ export default function Editor({ selectedFinding, onUpdateField, onDelete, onDup
     const [visibleSections, setVisibleSections] = useState<Set<SectionKey>>(new Set());
     const [cvssModalOpen, setCvssModalOpen] = useState(false);
     const [llmModalOpen, setLlmModalOpen] = useState(false);
+    const [redactingPii, setRedactingPii] = useState(false);
+    const [adjustField, setAdjustField] = useState<{ field: string; label: string; value: string } | null>(null);
 
     useEffect(() => {
         if (!selectedFinding) return;
@@ -84,9 +90,22 @@ export default function Editor({ selectedFinding, onUpdateField, onDelete, onDup
         onUpdateField('requestResponses', next);
     };
 
+    const handleRedactPii = async () => {
+        if (!selectedFinding || !llmConfig || selectedFinding.requestResponses.length === 0) return;
+        setRedactingPii(true);
+        try {
+            const redacted = await redactPii(llmConfig, selectedFinding.requestResponses);
+            onUpdateField('requestResponses', redacted);
+        } catch (err) {
+            console.error('Failed to redact PII:', err);
+        } finally {
+            setRedactingPii(false);
+        }
+    };
+
     return (
         <main className="flex-1 flex flex-col min-w-0 bg-[#09090b] relative">
-            {/* Editor UI — hidden in print */}
+            {/* Editor UI - hidden in print */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden print:hidden">
                 {selectedFinding && (
                     <EditorToolbar
@@ -107,7 +126,7 @@ export default function Editor({ selectedFinding, onUpdateField, onDelete, onDup
                             />
 
                             <div className="space-y-8 print:space-y-8">
-                                {/* Description — always visible */}
+                                {/* Description - always visible */}
                                 <ContentBlock
                                     icon={Layout}
                                     iconClassName="text-zinc-500"
@@ -115,29 +134,12 @@ export default function Editor({ selectedFinding, onUpdateField, onDelete, onDup
                                     value={selectedFinding.description}
                                     placeholder="Detailed technical description of the vulnerability..."
                                     onChange={(value) => onUpdateField('description', value)}
+                                    onLlmAdjust={llmConfig ? () => setAdjustField({ field: 'description', label: 'Description', value: selectedFinding.description }) : undefined}
                                 />
 
-                                {/* Impact — always visible */}
-                                <ContentBlock
-                                    icon={Bug}
-                                    iconClassName="text-red-400/70"
-                                    label="Impact"
-                                    value={selectedFinding.impact}
-                                    placeholder="What are the consequences if this vulnerability is successfully exploited?"
-                                    onChange={(value) => onUpdateField('impact', value)}
-                                />
 
-                                {/* Remediation — always visible */}
-                                <ContentBlock
-                                    icon={CheckCircle2}
-                                    iconClassName="text-emerald-400/70"
-                                    label="Remediation"
-                                    value={selectedFinding.remediation}
-                                    placeholder="Recommendations for software developers / system administrators to fix the vulnerability..."
-                                    onChange={(value) => onUpdateField('remediation', value)}
-                                />
 
-                                {/* Optional sections — PoC, References, Notes */}
+                                {/* Optional sections - PoC, References, Notes */}
                                 {OPTIONAL_SECTIONS.filter((s) => visibleSections.has(s.key)).map((section) => (
                                     <div key={section.key} className="group/section relative">
                                         <button
@@ -154,11 +156,13 @@ export default function Editor({ selectedFinding, onUpdateField, onDelete, onDup
                                             value={selectedFinding[section.key]}
                                             placeholder={section.placeholder}
                                             onChange={(value) => onUpdateField(section.key, value)}
+                                            onLlmAdjust={llmConfig ? () => setAdjustField({ field: section.key, label: section.label, value: selectedFinding[section.key] }) : undefined}
                                         />
+
                                     </div>
                                 ))}
 
-                                {/* Request / Response — multiple entries */}
+                                {/* Request / Response - multiple entries */}
                                 {visibleSections.has('requestResponse') && (
                                     <div className="relative group/section">
                                         <button
@@ -202,9 +206,25 @@ export default function Editor({ selectedFinding, onUpdateField, onDelete, onDup
                                                 </div>
                                             ))}
                                         </div>
-                                        <button onClick={addRequestResponse} className="flex items-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-400 px-3 py-2 rounded-lg border border-dashed border-zinc-800 hover:border-zinc-600 transition-colors mt-2">
-                                            <Plus className="w-3.5 h-3.5" /> Add request/response
-                                        </button>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <button onClick={addRequestResponse} className="flex items-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-400 px-3 py-2 rounded-lg border border-dashed border-zinc-800 hover:border-zinc-600 transition-colors">
+                                                <Plus className="w-3.5 h-3.5" /> Add request/response
+                                            </button>
+                                            {llmConfig && selectedFinding.requestResponses.length > 0 && (
+                                                <button
+                                                    onClick={handleRedactPii}
+                                                    disabled={redactingPii}
+                                                    className="flex items-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-300 px-3 py-2 rounded-lg border border-dashed border-zinc-800 hover:border-zinc-600 transition-colors disabled:opacity-50"
+                                                >
+                                                    {redactingPii ? (
+                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    ) : (
+                                                        <ShieldCheck className="w-3.5 h-3.5" />
+                                                    )}
+                                                    {redactingPii ? 'Redacting PII...' : 'Redact PII'}
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
 
@@ -255,7 +275,7 @@ export default function Editor({ selectedFinding, onUpdateField, onDelete, onDup
 
             {/* Print-only: render finding in report style */}
             {selectedFinding && (
-                <div className="hidden print:block print:bg-white print:text-black">
+                <div className="editor-print-finding hidden print:block print:bg-white print:text-black">
                     <FindingDetail finding={selectedFinding} index={0} />
                 </div>
             )}
@@ -281,6 +301,19 @@ export default function Editor({ selectedFinding, onUpdateField, onDelete, onDup
                     config={llmConfig}
                     onClose={() => setLlmModalOpen(false)}
                     onApply={(field, value) => onUpdateField(field, value)}
+                />
+            )}
+
+            {selectedFinding && llmConfig && adjustField && (
+                <LlmAdjustModal
+                    fieldLabel={adjustField.label}
+                    originalText={adjustField.value}
+                    config={llmConfig}
+                    onClose={() => setAdjustField(null)}
+                    onApply={(adjustedText) => {
+                        onUpdateField(adjustField.field as keyof Finding, adjustedText);
+                        setAdjustField(null);
+                    }}
                 />
             )}
         </main>

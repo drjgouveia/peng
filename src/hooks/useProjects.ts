@@ -18,9 +18,11 @@ export function useProjects(): UseProjectsReturn {
     useEffect(() => {
         getAllProjects()
             .then((stored) => {
+                // Normalize stored projects so fields added later get defaults
+                const normalized = stored.map((p) => ({ ...createDefaultProject(p.name), ...p }));
                 // Sort by most recently updated
-                stored.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-                setProjects(stored);
+                normalized.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+                setProjects(normalized);
             })
             .catch((err) => {
                 console.error('Failed to load projects:', err);

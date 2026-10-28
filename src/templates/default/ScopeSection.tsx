@@ -1,15 +1,21 @@
 import type { ReportData } from '../reportTypes';
 import { parseScopeItems } from '../../types';
+import { captionFigures } from '../../lib/figures';
 
 export function ScopeSection({ data }: { data: ReportData }) {
     const items = parseScopeItems(data.project.scope);
     const inScope = items.filter((i) => i.included);
     const outOfScope = items.filter((i) => !i.included);
 
+    const testType = data.project.testType;
+
     if (items.length === 0) {
         return (
             <div className="report-page px-16 py-16">
                 <h2 className="text-3xl font-bold mb-8 pb-4 border-b-2 border-black">2. Scope</h2>
+                {testType && (
+                    <p className="mb-4 text-sm"><span className="font-bold">Test Type:</span> {testType}</p>
+                )}
                 <p className="text-gray-400 italic">No scope information provided.</p>
             </div>
         );
@@ -18,6 +24,11 @@ export function ScopeSection({ data }: { data: ReportData }) {
     return (
         <div className="report-page px-16 py-16">
             <h2 className="text-3xl font-bold mb-8 pb-4 border-b-2 border-black">2. Scope</h2>
+
+            {/* Test Type */}
+            {testType && (
+                <p className="mb-6 text-sm"><span className="font-bold">Test Type:</span> {testType}</p>
+            )}
 
             {/* In Scope */}
             {inScope.length > 0 && (
@@ -66,6 +77,14 @@ export function ScopeSection({ data }: { data: ReportData }) {
                             ))}
                         </tbody>
                     </table>
+                </div>
+            )}
+
+            {/* Tools / Resources Used */}
+            {data.project.toolsResources && (
+                <div className={items.some((i) => i.included) || outOfScope.length > 0 ? 'mt-8' : ''}>
+                    <h3 className="text-lg font-bold mb-3 text-gray-800">Tools / Resources Used</h3>
+                    <div className="prose max-w-none text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: captionFigures(data.project.toolsResources, '2').html }} />
                 </div>
             )}
         </div>

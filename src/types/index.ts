@@ -2,6 +2,7 @@ export type Severity = 'Critical' | 'High' | 'Medium' | 'Low' | 'Info';
 export type Classification = 'Confidential' | 'Internal' | 'Public';
 export type FindingStatus = 'Open' | 'Fixed' | 'Accepted Risk';
 export type ScopeType = 'Web App' | 'API' | 'Network' | 'Mobile' | 'Other';
+export type TestType = 'Black-box' | 'Grey-box' | 'White-box';
 
 export interface ScopeItem {
     id: string;
@@ -32,8 +33,11 @@ export interface Project {
     reportDate: string;
     reportVersion: string;
     classification: Classification;
+    testType: string; // '' = not specified
     scope: string;
+    toolsResources: string;
     executiveSummary: string;
+    conclusion: string;
     createdAt: string;
     updatedAt: string;
 }
@@ -100,8 +104,11 @@ export function createDefaultProject(name: string): Project {
         reportDate: now.split('T')[0],
         reportVersion: '1.0',
         classification: 'Confidential',
+        testType: '',
         scope: '',
+        toolsResources: '',
         executiveSummary: '',
+        conclusion: '',
         createdAt: now,
         updatedAt: now,
     };

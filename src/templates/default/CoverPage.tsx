@@ -28,7 +28,7 @@ export function CoverPage({ data }: { data: ReportData }) {
                 <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
                         <p className="text-gray-500 uppercase text-xs tracking-wider mb-1">Report Date</p>
-                        <p className="font-semibold">{project.reportDate || '—'}</p>
+                        <p className="font-semibold">{project.reportDate || '-'}</p>
                     </div>
                     <div className="text-center">
                         <p className="text-gray-500 uppercase text-xs tracking-wider mb-1">Version</p>
@@ -37,9 +37,9 @@ export function CoverPage({ data }: { data: ReportData }) {
                     <div className="text-right">
                         <p className="text-gray-500 uppercase text-xs tracking-wider mb-1">Assessment Period</p>
                         <p className="font-semibold">
-                            {project.assessmentDateStart && project.assessmentDateEnd
-                                ? `${project.assessmentDateStart} — ${project.assessmentDateEnd}`
-                                : project.assessmentDateStart || '—'}
+                            {project.assessmentDateStart && project.assessmentDateEnd && project.assessmentDateStart !== project.assessmentDateEnd
+                                ? `${project.assessmentDateStart} - ${project.assessmentDateEnd}`
+                                : project.assessmentDateStart || project.assessmentDateEnd || '-'}
                         </p>
                     </div>
                 </div>

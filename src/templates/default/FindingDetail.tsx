@@ -1,4 +1,5 @@
 import type { Finding } from '../../types';
+import { captionFigures } from '../../lib/figures';
 
 interface FindingDetailProps {
     finding: Finding;
@@ -7,6 +8,15 @@ interface FindingDetailProps {
 
 export function FindingDetail({ finding, index }: FindingDetailProps) {
     const f = finding;
+
+    // Number figures sequentially across all content sections of this finding
+    const prefix = `4.${index + 1}`;
+    const sectionHtmls = [f.description, f.businessSummary, f.impact, f.remediation, f.references, f.poc];
+    const imgCounts = sectionHtmls.map((html) => (html.match(/<img\b/g) || []).length);
+    const starts = imgCounts.map((_, i) => imgCounts.slice(0, i).reduce((a, b) => a + b, 1));
+    const [description, businessSummary, impact, remediation, references, poc] = sectionHtmls.map(
+        (html, i) => captionFigures(html, prefix, starts[i]).html
+    );
 
     return (
         <div className="report-page px-16 py-16">
@@ -32,8 +42,8 @@ export function FindingDetail({ finding, index }: FindingDetailProps) {
             <table className="text-sm w-full mb-8 border-collapse">
                 <tbody>
                     <MetaRow label="Severity" value={f.severity} />
-                    <MetaRow label="Status" value={f.status} />
                     {f.cvss && <MetaRow label="CVSS Score" value={f.cvss} />}
+                    {f.cvssVector && <MetaRow label="CVSS Vector" value={f.cvssVector} />}
                     {f.cve && <MetaRow label="CVE" value={f.cve} />}
                     {f.cwe && <MetaRow label="CWE" value={f.cwe} />}
                     {f.endpoints.length > 0 && f.endpoints.map((ep, i) => (
@@ -47,11 +57,10 @@ export function FindingDetail({ finding, index }: FindingDetailProps) {
 
             {/* Content Sections */}
             <div className="space-y-8">
-                {f.description && <ContentSection title="Description" html={f.description} />}
-                {f.poc && <ContentSection title="Proof of Concept" html={f.poc} />}
-                {f.businessSummary && <ContentSection title="Business Summary" html={f.businessSummary} />}
+                {description && <ContentSection title="Description" html={description} />}
+                {businessSummary && <ContentSection title="Business Summary" html={businessSummary} />}
                 {f.requestResponses.length > 0 && f.requestResponses.map((rr, i) => (
-                    <div key={rr.id} className="report-no-break">
+                    <div key={rr.id}>
                         <h4 className="text-lg font-bold mb-3 text-gray-800">Request / Response {f.requestResponses.length > 1 ? `#${i + 1}` : ''}</h4>
                         {rr.request && (
                             <div className="mb-3">
@@ -67,9 +76,10 @@ export function FindingDetail({ finding, index }: FindingDetailProps) {
                         )}
                     </div>
                 ))}
-                {f.impact && <ContentSection title="Impact" html={f.impact} />}
-                {f.remediation && <ContentSection title="Remediation" html={f.remediation} />}
-                {f.references && <ContentSection title="References" html={f.references} />}
+                {impact && <ContentSection title="Impact" html={impact} />}
+                {remediation && <ContentSection title="Remediation" html={remediation} />}
+                {references && <ContentSection title="References" html={references} />}
+                {poc && <ContentSection title="Proof of Concept" html={poc} />}
             </div>
         </div>
     );
@@ -86,7 +96,7 @@ function MetaRow({ label, value }: { label: string; value: string }) {
 
 function ContentSection({ title, html }: { title: string; html: string }) {
     return (
-        <div className="report-no-break">
+        <div>
             <h4 className="text-lg font-bold mb-3 text-gray-800">{title}</h4>
             <div className="prose report-prose max-w-none text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />
         </div>

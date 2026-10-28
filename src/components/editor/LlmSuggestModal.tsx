@@ -8,7 +8,7 @@ interface LlmSuggestModalProps {
     finding: Finding;
     config: LlmConfig;
     onClose: () => void;
-    onApply: (field: 'description' | 'impact' | 'remediation', value: string) => void;
+    onApply: (field: 'description' | 'impact' | 'remediation' | 'businessSummary', value: string) => void;
 }
 
 export default function LlmSuggestModal({ finding, config, onClose, onApply }: LlmSuggestModalProps) {
@@ -37,7 +37,7 @@ export default function LlmSuggestModal({ finding, config, onClose, onApply }: L
         }
     };
 
-    const handleApply = (field: 'description' | 'impact' | 'remediation') => {
+    const handleApply = (field: 'description' | 'impact' | 'remediation' | 'businessSummary') => {
         if (!suggestion) return;
         onApply(field, suggestion[field]);
         setApplied((prev) => new Set(prev).add(field));
@@ -48,13 +48,15 @@ export default function LlmSuggestModal({ finding, config, onClose, onApply }: L
         onApply('description', suggestion.description);
         onApply('impact', suggestion.impact);
         onApply('remediation', suggestion.remediation);
-        setApplied(new Set(['description', 'impact', 'remediation']));
+        onApply('businessSummary', suggestion.businessSummary);
+        setApplied(new Set(['description', 'impact', 'remediation', 'businessSummary']));
     };
 
-    const fields: { key: 'description' | 'impact' | 'remediation'; label: string }[] = [
+    const fields: { key: 'description' | 'impact' | 'remediation' | 'businessSummary'; label: string }[] = [
         { key: 'description', label: 'Description' },
         { key: 'impact', label: 'Impact' },
         { key: 'remediation', label: 'Remediation' },
+        { key: 'businessSummary', label: 'Business Summary' },
     ];
 
     return (
@@ -137,7 +139,7 @@ export default function LlmSuggestModal({ finding, config, onClose, onApply }: L
                 </div>
 
                 <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-zinc-800 shrink-0">
-                    {suggestion && applied.size < 3 && (
+                    {suggestion && applied.size < 4 && (
                         <button
                             onClick={handleApplyAll}
                             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors"

@@ -5,6 +5,7 @@ import { ExecutiveSummary } from './ExecutiveSummary';
 import { ScopeSection } from './ScopeSection';
 import { FindingSummary } from './FindingSummary';
 import { FindingDetail } from './FindingDetail';
+import { ConclusionSection } from './ConclusionSection';
 
 export function DefaultTemplate({ data }: { data: ReportData }) {
     return (
@@ -17,6 +18,7 @@ export function DefaultTemplate({ data }: { data: ReportData }) {
             {data.findings.map((finding, index) => (
                 <FindingDetail key={finding.id} finding={finding} index={index} />
             ))}
+            <ConclusionSection data={data} />
         </div>
     );
 }

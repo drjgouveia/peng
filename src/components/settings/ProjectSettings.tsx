@@ -1,18 +1,34 @@
-import { Settings, FileText, Users, Calendar, Shield, Bookmark } from 'lucide-react';
+import { useState } from 'react';
+import { Settings, FileText, Users, Calendar, Shield, Bookmark, Bot, Loader2, Wrench, Boxes, Flag } from 'lucide-react';
 import RichTextEditor from '../editor/RichTextEditor';
 import ScopeList from './ScopeList';
 import LlmSettings from './LlmSettings';
-import type { Project, Classification } from '../../types';
+import type { Project, Classification, Finding } from '../../types';
 import type { LlmConfig } from '../../lib/llm';
+import { generateExecutiveSummary } from '../../lib/llm';
 
 interface ProjectSettingsProps {
     project: Project;
+    findings: Finding[];
     onUpdate: (field: keyof Project, value: string) => void;
     llmConfig: LlmConfig;
     onUpdateLlmConfig: (config: LlmConfig) => void;
 }
 
-export default function ProjectSettings({ project, onUpdate, llmConfig, onUpdateLlmConfig }: ProjectSettingsProps) {
+export default function ProjectSettings({ project, findings, onUpdate, llmConfig, onUpdateLlmConfig }: ProjectSettingsProps) {
+    const [generatingSummary, setGeneratingSummary] = useState(false);
+
+    const handleGenerateSummary = async () => {
+        setGeneratingSummary(true);
+        try {
+            const summary = await generateExecutiveSummary(llmConfig, findings);
+            onUpdate('executiveSummary', summary);
+        } catch (err) {
+            console.error('Failed to generate executive summary:', err);
+        } finally {
+            setGeneratingSummary(false);
+        }
+    };
     return (
         <main className="flex-1 flex flex-col min-w-0 bg-[#09090b] relative print:bg-white print:text-black">
             <div className="flex-1 overflow-y-auto print:overflow-visible">
@@ -111,8 +127,8 @@ export default function ProjectSettings({ project, onUpdate, llmConfig, onUpdate
                             </div>
                         </div>
 
-                        {/* Version & Classification */}
-                        <div className="grid grid-cols-2 gap-6">
+                        {/* Version, Classification & Test Type */}
+                        <div className="grid grid-cols-3 gap-6">
                             <div>
                                 <label className="flex items-center gap-2 text-sm font-medium text-zinc-400 mb-2">
                                     <Bookmark className="w-4 h-4" /> Report Version
@@ -139,6 +155,21 @@ export default function ProjectSettings({ project, onUpdate, llmConfig, onUpdate
                                     <option value="Public" className="bg-zinc-900">Public</option>
                                 </select>
                             </div>
+                            <div>
+                                <label className="flex items-center gap-2 text-sm font-medium text-zinc-400 mb-2">
+                                    <Boxes className="w-4 h-4" /> Test Type
+                                </label>
+                                <select
+                                    value={project.testType}
+                                    onChange={(e) => onUpdate('testType', e.target.value)}
+                                    className="w-full bg-zinc-900/50 border border-zinc-800 rounded-lg px-4 py-3 text-zinc-200 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors appearance-none cursor-pointer"
+                                >
+                                    <option value="" className="bg-zinc-900">Not specified</option>
+                                    <option value="Black-box" className="bg-zinc-900">Black-box</option>
+                                    <option value="Grey-box" className="bg-zinc-900">Grey-box</option>
+                                    <option value="White-box" className="bg-zinc-900">White-box</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div className="border-t border-zinc-800/50" />
@@ -154,15 +185,53 @@ export default function ProjectSettings({ project, onUpdate, llmConfig, onUpdate
                             />
                         </div>
 
-                        {/* Executive Summary */}
+                        {/* Tools / Resources Used */}
                         <div>
                             <h3 className="flex items-center text-lg font-semibold text-zinc-100 print:text-black mb-3">
-                                <FileText className="w-5 h-5 mr-2 text-emerald-400/70 print:hidden" /> Executive Summary
+                                <Wrench className="w-5 h-5 mr-2 text-amber-400/70 print:hidden" /> Tools / Resources Used
                             </h3>
+                            <RichTextEditor
+                                content={project.toolsResources}
+                                placeholder="Tools and resources used during the assessment (e.g. Burp Suite, Nmap, Nuclei, OWASP Testing Guide)..."
+                                onChange={(value) => onUpdate('toolsResources', value)}
+                            />
+                        </div>
+
+                        {/* Executive Summary */}
+                        <div>
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="flex items-center text-lg font-semibold text-zinc-100 print:text-black">
+                                    <FileText className="w-5 h-5 mr-2 text-emerald-400/70 print:hidden" /> Executive Summary
+                                </h3>
+                                <button
+                                    onClick={handleGenerateSummary}
+                                    disabled={generatingSummary || findings.length === 0}
+                                    className="flex items-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-300 px-3 py-2 rounded-lg border border-dashed border-zinc-800 hover:border-zinc-600 transition-colors disabled:opacity-50 print:hidden"
+                                >
+                                    {generatingSummary ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                        <Bot className="w-3.5 h-3.5" />
+                                    )}
+                                    {generatingSummary ? 'Generating...' : 'Generate with AI'}
+                                </button>
+                            </div>
                             <RichTextEditor
                                 content={project.executiveSummary}
                                 placeholder="High-level overview of the assessment for non-technical stakeholders (C-level executives)..."
                                 onChange={(value) => onUpdate('executiveSummary', value)}
+                            />
+                        </div>
+
+                        {/* Conclusion */}
+                        <div>
+                            <h3 className="flex items-center text-lg font-semibold text-zinc-100 print:text-black mb-3">
+                                <Flag className="w-5 h-5 mr-2 text-rose-400/70 print:hidden" /> Conclusion
+                            </h3>
+                            <RichTextEditor
+                                content={project.conclusion}
+                                placeholder="Overall conclusion of the assessment, next steps, and closing remarks (optional - omitted from the report if empty)..."
+                                onChange={(value) => onUpdate('conclusion', value)}
                             />
                         </div>
 

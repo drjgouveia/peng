@@ -16,7 +16,7 @@ export function FindingSummary({ data }: { data: ReportData }) {
                         <th className="text-left py-2 font-bold w-10">#</th>
                         <th className="text-left py-2 font-bold">Finding Title</th>
                         <th className="text-center py-2 font-bold w-24">Severity</th>
-                        <th className="text-center py-2 font-bold w-24">Status</th>
+
                         <th className="text-center py-2 font-bold w-16">CVSS</th>
                     </tr>
                 </thead>
@@ -26,13 +26,13 @@ export function FindingSummary({ data }: { data: ReportData }) {
                             <td className="py-2 text-gray-500">{i + 1}</td>
                             <td className="py-2 font-medium">{f.title || 'Untitled'}</td>
                             <td className="py-2 text-center">
-                                <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase">
+                                <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase whitespace-nowrap">
                                     <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ backgroundColor: SEV_COLORS[f.severity] }} />
                                     {f.severity}
                                 </span>
                             </td>
-                            <td className="py-2 text-center text-xs">{f.status}</td>
-                            <td className="py-2 text-center font-mono text-xs">{f.cvss || '—'}</td>
+
+                            <td className="py-2 text-center font-mono text-xs">{f.cvss || '-'}</td>
                         </tr>
                     ))}
                 </tbody>

@@ -116,10 +116,10 @@ export default function CvssCalculatorModal({ open, onClose, initialVector, onAp
                                 {avDropdown.open && (
                                     <div className="absolute top-full left-0 mt-1 z-50 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl py-1 min-w-full">
                                         {[
-                                            { value: 'N', label: 'Network (N)' },
-                                            { value: 'A', label: 'Adjacent (A)' },
-                                            { value: 'L', label: 'Local (L)' },
-                                            { value: 'P', label: 'Physical (P)' },
+                                            { value: 'N', label: 'Network (N) - 0.85' },
+                                            { value: 'A', label: 'Adjacent (A) - 0.62' },
+                                            { value: 'L', label: 'Local (L) - 0.55' },
+                                            { value: 'P', label: 'Physical (P) - 0.20' },
                                         ].map((opt) => (
                                             <button
                                                 key={opt.value}
@@ -156,8 +156,8 @@ export default function CvssCalculatorModal({ open, onClose, initialVector, onAp
                                 {acDropdown.open && (
                                     <div className="absolute top-full left-0 mt-1 z-50 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl py-1 min-w-full">
                                         {[
-                                            { value: 'L', label: 'Low (L)' },
-                                            { value: 'H', label: 'High (H)' },
+                                            { value: 'L', label: 'Low (L) - 0.77' },
+                                            { value: 'H', label: 'High (H) - 0.44' },
                                         ].map((opt) => (
                                             <button
                                                 key={opt.value}
@@ -195,9 +195,9 @@ export default function CvssCalculatorModal({ open, onClose, initialVector, onAp
                                 {prDropdown.open && (
                                     <div className="absolute top-full left-0 mt-1 z-50 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl py-1 min-w-full">
                                         {[
-                                            { value: 'N', label: 'None (N)' },
-                                            { value: 'L', label: 'Low (L)' },
-                                            { value: 'H', label: 'High (H)' },
+                                            { value: 'N', label: 'None (N) - 0.85' },
+                                            { value: 'L', label: 'Low (L) - 0.62/0.68' },
+                                            { value: 'H', label: 'High (H) - 0.27/0.50' },
                                         ].map((opt) => (
                                             <button
                                                 key={opt.value}
@@ -234,8 +234,8 @@ export default function CvssCalculatorModal({ open, onClose, initialVector, onAp
                                 {uiDropdown.open && (
                                     <div className="absolute top-full left-0 mt-1 z-50 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl py-1 min-w-full">
                                         {[
-                                            { value: 'N', label: 'None (N)' },
-                                            { value: 'R', label: 'Required (R)' },
+                                            { value: 'N', label: 'None (N) - 0.85' },
+                                            { value: 'R', label: 'Required (R) - 0.62' },
                                         ].map((opt) => (
                                             <button
                                                 key={opt.value}
@@ -272,8 +272,8 @@ export default function CvssCalculatorModal({ open, onClose, initialVector, onAp
                                 {sDropdown.open && (
                                     <div className="absolute top-full left-0 mt-1 z-50 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl py-1 min-w-full">
                                         {[
-                                            { value: 'U', label: 'Unchanged (U)' },
-                                            { value: 'C', label: 'Changed (C)' },
+                                            { value: 'U', label: 'Unchanged (U) - x1.00' },
+                                            { value: 'C', label: 'Changed (C) - x1.08' },
                                         ].map((opt) => (
                                             <button
                                                 key={opt.value}
@@ -313,9 +313,9 @@ export default function CvssCalculatorModal({ open, onClose, initialVector, onAp
                                 {cDropdown.open && (
                                     <div className="absolute top-full left-0 mt-1 z-50 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl py-1 min-w-full">
                                         {[
-                                            { value: 'N', label: 'None (N)' },
-                                            { value: 'L', label: 'Low (L)' },
-                                            { value: 'H', label: 'High (H)' },
+                                            { value: 'N', label: 'None (N) - 0.00' },
+                                            { value: 'L', label: 'Low (L) - 0.22' },
+                                            { value: 'H', label: 'High (H) - 0.56' },
                                         ].map((opt) => (
                                             <button
                                                 key={opt.value}
@@ -353,9 +353,9 @@ export default function CvssCalculatorModal({ open, onClose, initialVector, onAp
                                 {iDropdown.open && (
                                     <div className="absolute top-full left-0 mt-1 z-50 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl py-1 min-w-full">
                                         {[
-                                            { value: 'N', label: 'None (N)' },
-                                            { value: 'L', label: 'Low (L)' },
-                                            { value: 'H', label: 'High (H)' },
+                                            { value: 'N', label: 'None (N) - 0.00' },
+                                            { value: 'L', label: 'Low (L) - 0.22' },
+                                            { value: 'H', label: 'High (H) - 0.56' },
                                         ].map((opt) => (
                                             <button
                                                 key={opt.value}
@@ -393,9 +393,9 @@ export default function CvssCalculatorModal({ open, onClose, initialVector, onAp
                                 {aDropdown.open && (
                                     <div className="absolute top-full left-0 mt-1 z-50 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl py-1 min-w-full">
                                         {[
-                                            { value: 'N', label: 'None (N)' },
-                                            { value: 'L', label: 'Low (L)' },
-                                            { value: 'H', label: 'High (H)' },
+                                            { value: 'N', label: 'None (N) - 0.00' },
+                                            { value: 'L', label: 'Low (L) - 0.22' },
+                                            { value: 'H', label: 'High (H) - 0.56' },
                                         ].map((opt) => (
                                             <button
                                                 key={opt.value}

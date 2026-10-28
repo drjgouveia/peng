@@ -95,10 +95,10 @@ export default function ProjectDashboard({
                         {/* Hero Description */}
                         <div className="mb-10 pb-10 border-b border-zinc-800/60">
                             <p className="text-lg text-zinc-400 mb-2">
-                                Open-source penetration test report writing tool. Write, manage, and export professional pentest reports — fast.
+                                Open-source penetration test report writing tool. Write, manage, and export professional pentest reports - fast.
                             </p>
                             <p className="text-sm text-zinc-600 mb-6">
-                                Your data never leaves your browser. No cloud, no servers — everything is stored locally.
+                                Your data never leaves your browser. No cloud, no servers - everything is stored locally.
                             </p>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 {[

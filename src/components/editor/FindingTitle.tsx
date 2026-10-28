@@ -14,7 +14,7 @@ const STATUS_OPTIONS: { value: FindingStatus; dot: string; text: string }[] = [
 
 const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'];
 
-// All optional properties (url removed — endpoints managed separately)
+// All optional properties (url removed - endpoints managed separately)
 const OPTIONAL_PROPERTIES = [
     { key: 'status', label: 'Status', icon: CircleDot, desc: 'Current status of the finding' },
     { key: 'parameter', label: 'Parameter', icon: Tag, desc: 'Vulnerable request parameter name' },
@@ -142,7 +142,7 @@ export default function FindingTitle({ finding, onUpdate, onOpenCvssCalculator }
             {/* Property Table */}
             <div className="mt-3 print:hidden space-y-0">
 
-                {/* Severity — always visible */}
+                {/* Severity - always visible */}
                 <div className="flex items-center group min-h-[34px] -mx-2 rounded-md hover:bg-zinc-800/40 transition-colors">
                     <div className="flex items-center gap-1.5 text-xs text-zinc-500 w-28 px-2 shrink-0">
                         <Activity className="w-3.5 h-3.5" /><span>Risk Level</span>
@@ -218,7 +218,7 @@ export default function FindingTitle({ finding, onUpdate, onOpenCvssCalculator }
                     </button>
                 )}
 
-                {/* Optional properties — only shown when added */}
+                {/* Optional properties - only shown when added */}
                 {OPTIONAL_PROPERTIES.filter((p) => visibleProps.has(p.key)).map((prop) => {
                     const Icon = prop.icon;
 
@@ -341,7 +341,7 @@ export default function FindingTitle({ finding, onUpdate, onOpenCvssCalculator }
                 )}
             </div>
 
-            {/* Print metadata table — only filled fields */}
+            {/* Print metadata table - only filled fields */}
             <div className="hidden print:block mt-4 border-b-2 border-black pb-4">
                 <table className="text-sm w-full">
                     <tbody>
@@ -356,6 +356,7 @@ export default function FindingTitle({ finding, onUpdate, onOpenCvssCalculator }
                         {finding.cve && <tr><td className="font-bold pr-4 py-0.5">CVE</td><td>{finding.cve}</td></tr>}
                         {finding.cwe && <tr><td className="font-bold pr-4 py-0.5">CWE</td><td>{finding.cwe}</td></tr>}
                         {finding.cvss && <tr><td className="font-bold pr-4 py-0.5">CVSS</td><td>{finding.cvss}</td></tr>}
+                        {finding.cvssVector && <tr><td className="font-bold pr-4 py-0.5">CVSS Vector</td><td className="break-all font-mono text-xs">{finding.cvssVector}</td></tr>}
                         {finding.references && <tr><td className="font-bold pr-4 py-0.5">References</td><td className="break-all">{finding.references}</td></tr>}
                     </tbody>
                 </table>

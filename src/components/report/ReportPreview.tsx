@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Printer, ChevronDown, History } from 'lucide-react';
 import { listTemplates } from '../../templates/registry';
 import { buildReportData } from '../../templates/reportTypes';
@@ -32,8 +33,16 @@ export default function ReportPreview({ project, findings, onClose, onRestoreVer
         onRestoreVersion(version.snapshot.project, version.snapshot.findings);
     };
 
-    return (
-        <div className="fixed inset-0 z-[100] flex flex-col bg-zinc-950">
+    const [portalHost] = useState(() => document.createElement('div'));
+    useEffect(() => {
+        document.body.appendChild(portalHost);
+        return () => {
+            document.body.removeChild(portalHost);
+        };
+    }, [portalHost]);
+
+    return createPortal(
+        <div className="fixed inset-0 z-[100] flex flex-col bg-zinc-950 print:bg-white">
             {/* Toolbar */}
             <div className="flex items-center justify-between px-6 py-3 bg-zinc-900 border-b border-zinc-800 shrink-0 report-toolbar">
                 <div className="flex items-center gap-4">
@@ -81,7 +90,7 @@ export default function ReportPreview({ project, findings, onClose, onRestoreVer
             </div>
 
             {/* Report Content */}
-            <div className="flex-1 overflow-y-auto bg-zinc-800/30">
+            <div className="flex-1 overflow-y-auto bg-zinc-800/30 print:bg-white">
                 <div
                     ref={reportRef}
                     id="report-content"
@@ -99,6 +108,7 @@ export default function ReportPreview({ project, findings, onClose, onRestoreVer
                     onRestore={handleRestore}
                 />
             )}
-        </div>
+        </div>,
+        portalHost
     );
 }

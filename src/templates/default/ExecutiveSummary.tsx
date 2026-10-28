@@ -1,5 +1,6 @@
 import type { ReportData } from '../reportTypes';
 import type { Severity } from '../../types';
+import { captionFigures } from '../../lib/figures';
 
 const SEV_COLORS: Record<Severity, string> = {
     Critical: '#ef4444', High: '#f97316', Medium: '#eab308', Low: '#3b82f6', Info: '#9ca3af',
@@ -14,7 +15,7 @@ export function ExecutiveSummary({ data }: { data: ReportData }) {
 
             {/* Summary HTML */}
             {project.executiveSummary ? (
-                <div className="prose max-w-none mb-10 text-base leading-relaxed" dangerouslySetInnerHTML={{ __html: project.executiveSummary }} />
+                <div className="prose max-w-none mb-10 text-base leading-relaxed" dangerouslySetInnerHTML={{ __html: captionFigures(project.executiveSummary, '1').html }} />
             ) : (
                 <p className="text-gray-400 italic mb-10">No executive summary provided.</p>
             )}
@@ -30,14 +31,16 @@ export function ExecutiveSummary({ data }: { data: ReportData }) {
                     </tr>
                 </thead>
                 <tbody>
-                    {(['Critical', 'High', 'Medium', 'Low', 'Info'] as Severity[]).map((sev) => {
+                    {(['Critical', 'High', 'Medium', 'Low', 'Info'] as Severity[]).filter((sev) => stats.bySeverity[sev] > 0).map((sev) => {
                         const count = stats.bySeverity[sev];
                         const pct = stats.total > 0 ? (count / stats.total) * 100 : 0;
                         return (
                             <tr key={sev} className="border-b border-gray-200">
-                                <td className="py-2 font-semibold flex items-center gap-2">
-                                    <span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: SEV_COLORS[sev] }} />
-                                    {sev}
+                                <td className="py-2 font-semibold">
+                                    <span className="inline-flex items-center gap-2">
+                                        <span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: SEV_COLORS[sev] }} />
+                                        {sev}
+                                    </span>
                                 </td>
                                 <td className="py-2 text-center font-bold text-lg">{count}</td>
                                 <td className="py-2 pl-4">
@@ -60,12 +63,14 @@ export function ExecutiveSummary({ data }: { data: ReportData }) {
 
             {/* Status breakdown */}
             <div className="flex gap-8 text-sm">
-                {Object.entries(stats.byStatus).map(([status, count]) => (
-                    <div key={status}>
-                        <span className="text-gray-500">{status}: </span>
-                        <span className="font-bold">{count}</span>
-                    </div>
-                ))}
+                {Object.entries(stats.byStatus)
+                    .filter(([, count]) => count > 0)
+                    .map(([status, count]) => (
+                        <div key={status}>
+                            <span className="text-gray-500">{status}: </span>
+                            <span className="font-bold">{count}</span>
+                        </div>
+                    ))}
             </div>
         </div>
     );
